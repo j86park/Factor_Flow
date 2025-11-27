@@ -1,0 +1,12 @@
+# Shared
+.DS_Store
+.env
+
+# Frontend
+node_modules/
+dist/
+
+# Backend
+__pycache__/
+venv/
+*.pyc
