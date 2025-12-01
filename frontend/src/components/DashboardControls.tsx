@@ -25,6 +25,9 @@ export function DashboardControls() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
 
+  // The active factors count is now dynamically based on the fetched factors
+  const activeFactorsCount = factors.length;
+
   useEffect(() => {
     const now = new Date();
     setCurrentDate(now.toISOString().split('T')[0]);
@@ -67,8 +70,8 @@ export function DashboardControls() {
       {/* Dashboard Card Container */}
       <div className="bg-[#0f1419] rounded-[2rem] p-10 md:p-14 border border-gray-800/50 shadow-2xl">
         
-        {/* Title Row */}
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-10">
+        {/* Title Row - Centered */}
+        <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-10 text-center">
           Analytics Dashboard
         </h1>
 
@@ -110,13 +113,13 @@ export function DashboardControls() {
             {/* Separator */}
             <span className="text-gray-600 hidden md:block">•</span>
 
-            {/* Active Factors */}
+            {/* Active Factors - Dynamic count based on fetched factors */}
             <button 
               onClick={() => setIsFactorsOpen(true)}
               className="text-gray-400 hover:text-white transition-colors text-sm group"
             >
               <span className="group-hover:underline underline-offset-4">
-                {factors.length > 0 ? factors.length : '204'} Active Factors
+                {activeFactorsCount} Active Factors
               </span>
             </button>
           </div>
@@ -179,7 +182,7 @@ export function DashboardControls() {
         title="Factor Library"
         maxWidth="max-w-4xl"
       >
-        <div className="text-gray-400 mb-6">{factors.length} factors available</div>
+        <div className="text-gray-400 mb-6">{activeFactorsCount} factors available</div>
         
         <div className="relative mb-6">
           <input 
