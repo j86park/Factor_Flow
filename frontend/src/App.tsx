@@ -3,15 +3,15 @@ import { DashboardControls } from './components/DashboardControls';
 
 function App() {
   return (
-    <div className="min-h-screen bg-dark-bg text-white">
+    <div className="min-h-screen bg-[#0a0e14] text-white">
       <Header />
       
-      <main className="container mx-auto px-4 py-8 mt-12">
+      <main className="max-w-[1800px] mx-auto px-6 py-10">
         <DashboardControls />
         
         {/* Placeholder for future grid/charts */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            {/* Empty state for now */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+          {/* Empty state for now */}
         </div>
       </main>
     </div>
