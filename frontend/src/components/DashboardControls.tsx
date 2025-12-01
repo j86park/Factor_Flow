@@ -66,12 +66,12 @@ export function DashboardControls() {
   }, []);
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-10">
       {/* Dashboard Card Container */}
       <div className="bg-[#0f1419] rounded-[2rem] p-10 md:p-14 border border-gray-800/50 shadow-2xl">
         
         {/* Title Row - Centered */}
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-10 text-center">
+        <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-white tracking-tight mb-10 text-center">
           Analytics Dashboard
         </h1>
 
@@ -80,12 +80,6 @@ export function DashboardControls() {
           
           {/* Left Side: Buttons & Indicators */}
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
-            {/* Intro Video Button */}
-            <button className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#1a1f2e] border border-indigo-500/20 text-indigo-300 hover:bg-[#252b3b] hover:border-indigo-500/40 transition-all text-sm font-medium">
-              <span className="text-base">🎬</span>
-              <span>Intro Video</span>
-            </button>
-
             {/* Definitions Button */}
             <button 
               onClick={() => setIsDefinitionsOpen(true)}
