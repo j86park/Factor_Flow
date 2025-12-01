@@ -75,51 +75,41 @@ export function DashboardControls() {
           Analytics Dashboard
         </h1>
 
-        {/* Controls Row */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          
-          {/* Left Side: Buttons & Indicators */}
-          <div className="flex flex-wrap items-center gap-4 md:gap-6">
-            {/* Definitions Button */}
-            <button 
-              onClick={() => setIsDefinitionsOpen(true)}
-              className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#1a1f2e] border border-purple-500/20 text-purple-300 hover:bg-[#252b3b] hover:border-purple-500/40 transition-all text-sm font-medium"
-            >
-              <span className="text-base">📚</span>
-              <span>Definitions</span>
-            </button>
+        {/* Controls Row - Evenly spread horizontally */}
+        <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+          {/* Definitions Button */}
+          <button 
+            onClick={() => setIsDefinitionsOpen(true)}
+            className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#1a1f2e] border border-purple-500/20 text-purple-300 hover:bg-[#252b3b] hover:border-purple-500/40 transition-all text-sm font-medium"
+          >
+            <span className="text-base">📚</span>
+            <span>Definitions</span>
+          </button>
 
-            {/* Live Feed Indicator */}
-            <div className="flex items-center gap-2.5 text-gray-300 text-sm">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <span>Live Feed</span>
-            </div>
-
-            {/* Separator */}
-            <span className="text-gray-600 hidden md:block">•</span>
-
-            {/* Date */}
-            <span className="text-gray-400 text-sm">As of {currentDate}</span>
-
-            {/* Separator */}
-            <span className="text-gray-600 hidden md:block">•</span>
-
-            {/* Active Factors - Dynamic count based on fetched factors */}
-            <button 
-              onClick={() => setIsFactorsOpen(true)}
-              className="text-gray-400 hover:text-white transition-colors text-sm group"
-            >
-              <span className="group-hover:underline underline-offset-4">
-                {activeFactorsCount} Active Factors
-              </span>
-            </button>
+          {/* Live Feed Indicator */}
+          <div className="flex items-center gap-2.5 text-gray-300 text-sm">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span>Live Feed</span>
           </div>
 
-          {/* Right Side: Time Frame Switcher */}
-          <div className="flex bg-[#0a0e14] rounded-xl p-1 border border-gray-800/50">
+          {/* Date */}
+          <span className="text-gray-400 text-sm">As of {currentDate}</span>
+
+          {/* Active Factors - Dynamic count based on fetched factors */}
+          <button 
+            onClick={() => setIsFactorsOpen(true)}
+            className="text-gray-400 hover:text-white transition-colors text-sm group"
+          >
+            <span className="group-hover:underline underline-offset-4">
+              {activeFactorsCount} Active Factors
+            </span>
+          </button>
+
+          {/* Time Frame Switcher */}
+          <div className="flex bg-[#0a0e14] rounded-xl p-1">
             {TIME_FRAMES.map((tf) => (
               <button
                 key={tf}
