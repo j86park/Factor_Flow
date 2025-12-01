@@ -69,24 +69,24 @@ export function DashboardControls() {
 
   return (
     <div className="w-full mb-6">
-      {/* Bubble-like Container */}
-      <div className="bg-[#0a0e14] rounded-[2rem] p-8 border border-gray-800 shadow-xl">
+      {/* Bubble-like Container with softer border */}
+      <div className="bg-[#0a0e14] rounded-[2.5rem] p-10 border border-white/5 shadow-2xl">
         {/* Top Row: Title and Time Frames */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-          <h1 className="text-5xl font-bold text-white tracking-tight">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+          <h1 className="text-6xl font-bold text-white tracking-tight">
             Analytics Dashboard
           </h1>
           
-          {/* Time Frame Switcher */}
-          <div className="flex bg-[#131b26] rounded-lg p-1 border border-gray-800 self-start md:self-center">
+          {/* Time Frame Switcher - Aligned to bottom right relative to title */}
+          <div className="flex bg-[#131b26] rounded-lg p-1 border border-white/5 self-start md:self-end">
             {TIME_FRAMES.map((tf) => (
               <button
                 key={tf}
                 onClick={() => setSelectedTimeFrame(tf)}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                className={`px-5 py-2 rounded-md text-sm font-bold transition-all ${
                   selectedTimeFrame === tf
                     ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {tf}
@@ -96,20 +96,20 @@ export function DashboardControls() {
         </div>
 
         {/* Bottom Row: Metadata & Controls */}
-        <div className="flex flex-wrap items-center gap-6 text-sm">
+        <div className="flex flex-wrap items-center gap-8 text-sm font-medium">
           {/* Definitions Button */}
           <button 
             onClick={() => setIsDefinitionsOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1e2330] border border-purple-500/30 text-purple-400 hover:bg-[#252b3b] transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1e2330] border border-purple-500/20 text-purple-400 hover:bg-[#252b3b] transition-colors hover:border-purple-500/40"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
             <span>Definitions</span>
           </button>
 
           {/* Live Feed Indicator */}
-          <div className="flex items-center gap-2 text-gray-400">
+          <div className="flex items-center gap-3 text-gray-400">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
@@ -118,17 +118,17 @@ export function DashboardControls() {
           </div>
 
           {/* Date */}
-          <div className="text-gray-400">
-            <span className="text-gray-600 mx-2">•</span>
-            As of {currentDate}
+          <div className="text-gray-400 flex items-center gap-3">
+            <span className="text-gray-700 text-xs">•</span>
+            <span>As of {currentDate}</span>
           </div>
 
           {/* Active Factors Count (Clickable) */}
           <button 
             onClick={() => setIsFactorsOpen(true)}
-            className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 group"
+            className="text-gray-400 hover:text-white transition-colors flex items-center gap-3 group"
           >
-            <span className="text-gray-600 mx-2">•</span>
+            <span className="text-gray-700 text-xs">•</span>
             <span className="group-hover:underline decoration-gray-600 underline-offset-4">
               {factors.length > 0 ? factors.length : '204'} Active Factors
             </span>
