@@ -68,7 +68,7 @@ export function DashboardControls() {
   return (
     <div className="w-full mt-10">
       {/* Dashboard Card Container */}
-      <div className="bg-[#0f1419] rounded-[2rem] p-10 md:p-14 border border-gray-800/50 shadow-2xl">
+      <div className="bg-[#0f1419] rounded-[2rem] p-10 md:p-14 shadow-2xl">
         
         {/* Title Row - Centered */}
         <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-white tracking-tight mb-10 text-center">
