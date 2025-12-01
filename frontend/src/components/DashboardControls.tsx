@@ -23,9 +23,14 @@ export function DashboardControls() {
   const [definitions, setDefinitions] = useState<Definition[]>([]);
   const [factors, setFactors] = useState<Factor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
 
-  // Fetch data from backend
+  // Fetch data from backend and set date
   useEffect(() => {
+    // Set initial date
+    const now = new Date();
+    setCurrentDate(now.toISOString().split('T')[0]);
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
@@ -52,9 +57,15 @@ export function DashboardControls() {
     };
 
     fetchData();
-  }, []);
 
-  const currentDate = new Date().toISOString().split('T')[0];
+    // Optional: Update date if day changes while page is open (check every minute)
+    const interval = setInterval(() => {
+        const newDate = new Date().toISOString().split('T')[0];
+        setCurrentDate(prev => newDate !== prev ? newDate : prev);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="w-full mb-6">
@@ -205,4 +216,3 @@ export function DashboardControls() {
     </div>
   );
 }
-
