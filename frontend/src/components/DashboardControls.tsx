@@ -72,8 +72,8 @@ export function DashboardControls() {
       {/* Bubble-like Container with lighter background to stand out from main page */}
       <div className="bg-[#131b26] rounded-[2.5rem] p-12 border border-white/5 shadow-2xl">
         {/* Top Row: Title and Time Frames */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-          <h1 className="text-7xl font-bold text-white tracking-tight">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <h1 className="text-8xl font-bold text-white tracking-tight">
             Analytics Dashboard
           </h1>
           
@@ -95,44 +95,47 @@ export function DashboardControls() {
           </div>
         </div>
 
-        {/* Bottom Row: Metadata & Controls */}
-        <div className="flex flex-wrap items-center gap-10 text-base font-medium">
-          {/* Definitions Button */}
-          <button 
-            onClick={() => setIsDefinitionsOpen(true)}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#252b3b] border border-purple-500/20 text-purple-400 hover:bg-[#2a3140] transition-colors hover:border-purple-500/40"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            <span>Definitions</span>
-          </button>
+        {/* Bottom Row: Metadata & Controls - Spread out using justify-between */}
+        <div className="flex flex-wrap items-center justify-between gap-8 text-base font-medium w-full">
+          <div className="flex items-center gap-8">
+            {/* Definitions Button */}
+            <button 
+              onClick={() => setIsDefinitionsOpen(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#252b3b] border border-purple-500/20 text-purple-400 hover:bg-[#2a3140] transition-colors hover:border-purple-500/40"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span>Definitions</span>
+            </button>
 
-          {/* Live Feed Indicator */}
-          <div className="flex items-center gap-3 text-gray-400">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
-            <span>Live Feed</span>
+            {/* Live Feed Indicator */}
+            <div className="flex items-center gap-3 text-gray-400">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <span>Live Feed</span>
+            </div>
           </div>
 
-          {/* Date */}
-          <div className="text-gray-400 flex items-center gap-3">
-            <span className="text-gray-600 text-sm">•</span>
-            <span>As of {currentDate}</span>
-          </div>
+          <div className="flex items-center gap-8">
+            {/* Date */}
+            <div className="text-gray-400 flex items-center gap-3">
+              <span>As of {currentDate}</span>
+              <span className="text-gray-600 text-sm">•</span>
+            </div>
 
-          {/* Active Factors Count (Clickable) */}
-          <button 
-            onClick={() => setIsFactorsOpen(true)}
-            className="text-gray-400 hover:text-white transition-colors flex items-center gap-3 group"
-          >
-            <span className="text-gray-600 text-sm">•</span>
-            <span className="group-hover:underline decoration-gray-600 underline-offset-4">
-              {factors.length > 0 ? factors.length : '204'} Active Factors
-            </span>
-          </button>
+            {/* Active Factors Count (Clickable) */}
+            <button 
+              onClick={() => setIsFactorsOpen(true)}
+              className="text-gray-400 hover:text-white transition-colors flex items-center gap-3 group"
+            >
+              <span className="group-hover:underline decoration-gray-600 underline-offset-4">
+                {factors.length > 0 ? factors.length : '204'} Active Factors
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
