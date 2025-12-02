@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface FactorData {
   name: string;
@@ -51,17 +51,16 @@ function ReturnCell({ value }: { value: number | null }) {
 }
 
 export function FactorFocusCard() {
-  const [factors, setFactors] = useState<FactorData[]>(EMPTY_FACTORS);
+  const [factors] = useState<FactorData[]>(EMPTY_FACTORS);
 
-  // In the future, this useEffect can fetch real factor data from the backend
-  useEffect(() => {
-    // Placeholder: factors remain empty until backend provides data
-    // const fetchFactors = async () => {
-    //   const res = await fetch('/api/factor-focus');
-    //   if (res.ok) setFactors(await res.json());
-    // };
-    // fetchFactors();
-  }, []);
+  // In the future, you can add setFactors back and fetch real factor data from the backend
+  // useEffect(() => {
+  //   const fetchFactors = async () => {
+  //     const res = await fetch('/api/factor-focus');
+  //     if (res.ok) setFactors(await res.json());
+  //   };
+  //   fetchFactors();
+  // }, []);
 
   return (
     <div className="bg-[#151d2a] rounded-[2rem] p-8 shadow-2xl">
