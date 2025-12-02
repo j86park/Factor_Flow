@@ -77,9 +77,6 @@ export function FactorFocusCard() {
 
       {/* Content Card */}
       <div className="bg-[#0d1321] rounded-2xl p-6">
-        {/* Section Title */}
-        <h3 className="text-xl font-bold text-purple-400 mb-6">Hedge Fund Playbook</h3>
-
         {/* Table Header */}
         <div className="flex items-center justify-between mb-4 px-4">
           <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider w-1/2">Factor</span>
