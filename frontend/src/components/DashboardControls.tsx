@@ -76,11 +76,11 @@ export function DashboardControls() {
         </h1>
 
         {/* Controls Row - Evenly spread horizontally */}
-        <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
-          {/* Definitions Button */}
+        <div className="flex flex-wrap items-center justify-between gap-6 px-4">
+          {/* Definitions Button - Dark rounded pill style */}
           <button 
             onClick={() => setIsDefinitionsOpen(true)}
-            className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#1a1f2e] border border-purple-500/20 text-purple-300 hover:bg-[#252b3b] hover:border-purple-500/40 transition-all text-sm font-medium"
+            className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-[#1a2332] text-gray-300 hover:bg-[#232d3f] transition-all text-sm font-medium"
           >
             <span className="text-base">📚</span>
             <span>Definitions</span>
@@ -98,26 +98,24 @@ export function DashboardControls() {
           {/* Date */}
           <span className="text-gray-400 text-sm">As of {currentDate}</span>
 
-          {/* Active Factors - Dynamic count based on fetched factors */}
+          {/* Active Factors - Dark rounded pill style */}
           <button 
             onClick={() => setIsFactorsOpen(true)}
-            className="text-gray-400 hover:text-white transition-colors text-sm group"
+            className="px-6 py-3 rounded-full bg-[#1a2332] text-gray-300 hover:bg-[#232d3f] transition-all text-sm font-medium"
           >
-            <span className="group-hover:underline underline-offset-4">
-              {activeFactorsCount} Active Factors
-            </span>
+            {activeFactorsCount} Active Factors
           </button>
 
-          {/* Time Frame Switcher */}
-          <div className="flex bg-[#0a0e14] rounded-xl p-1">
+          {/* Time Frame Switcher - Rounded pills with cyan highlight */}
+          <div className="flex gap-2">
             {TIME_FRAMES.map((tf) => (
               <button
                 key={tf}
                 onClick={() => setSelectedTimeFrame(tf)}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   selectedTimeFrame === tf
-                    ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/25'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-cyan-500 text-black'
+                    : 'bg-[#1a2332] text-gray-400 hover:text-white hover:bg-[#232d3f]'
                 }`}
               >
                 {tf}
