@@ -7,13 +7,11 @@ function App() {
     <div className="min-h-screen bg-[#0d1321] text-white">
       <Header />
       
-      <main className="max-w-[1800px] mx-auto px-6 py-10">
+      <main className="max-w-[1800px] mx-auto px-6 py-10 space-y-12">
         <DashboardControls />
         
         {/* Factor Focus of the Week */}
-        <div className="mt-20">
-          <FactorFocusCard />
-        </div>
+        <FactorFocusCard />
       </main>
     </div>
   );
