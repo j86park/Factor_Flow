@@ -11,7 +11,7 @@ function App() {
         <DashboardControls />
         
         {/* Factor Focus of the Week */}
-        <div className="mt-16">
+        <div className="mt-20">
           <FactorFocusCard />
         </div>
       </main>
