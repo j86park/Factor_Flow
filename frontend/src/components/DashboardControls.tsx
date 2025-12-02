@@ -92,14 +92,13 @@ export function DashboardControls() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
-            <span>Live Feed</span>
-            <span className="text-gray-400">As of {currentDate}</span>
+            <span>Live Feed <span className="text-gray-400">As of {currentDate}</span></span>
           </div>
 
-          {/* Active Factors - Dark rounded pill style */}
+          {/* Active Factors - Same design as Definitions */}
           <button 
             onClick={() => setIsFactorsOpen(true)}
-            className="px-6 py-3 rounded-full bg-[#1a2332] text-gray-300 hover:bg-[#232d3f] transition-all text-sm font-medium"
+            className="px-6 py-3 rounded-full bg-[#2a3a5a] text-gray-200 hover:bg-[#354766] transition-all text-sm font-medium"
           >
             {activeFactorsCount} Active Factors
           </button>
