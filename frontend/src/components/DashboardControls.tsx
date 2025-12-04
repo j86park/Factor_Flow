@@ -67,43 +67,43 @@ export function DashboardControls() {
 
   return (
     <div className="w-full mt-10">
-      {/* Dashboard Card Container */}
-      <div className="bg-[#151d2a] rounded-[2rem] p-10 md:p-14 shadow-2xl">
+      {/* Dashboard Card Container - with metallic gradient sheen */}
+      <div className="bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded-[2rem] p-10 md:p-14 shadow-2xl border border-white/5">
         
         {/* Title Row - Centered */}
-        <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-white tracking-tight mb-10 text-center">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-gray-200 tracking-tight mb-10 text-center">
           Analytics Dashboard
         </h1>
 
         {/* Controls Row - Evenly spread horizontally */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-2">
-          {/* Definitions Button - Dark blue rounded pill style */}
+        <div className="flex flex-wrap items-center justify-center gap-[3rem] px-2">
+          {/* Definitions Button - Purple tint */}
           <button 
             onClick={() => setIsDefinitionsOpen(true)}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-[#2a3a5a] text-gray-200 hover:bg-[#354766] transition-all text-sm font-medium"
+            className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all text-sm font-medium"
           >
             <span className="text-base">📚</span>
             <span>Definitions</span>
           </button>
 
-          {/* Live Feed + Date combined */}
-          <div className="flex items-center gap-3 text-gray-300 text-sm">
+          {/* Live Feed + Date combined - Cyan for digital/real-time feel */}
+          <div className="flex items-center gap-3 text-cyan-400 text-sm">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
-            <span>Live Feed <span className="text-gray-400">As of {currentDate}</span></span>
+            <span>Live Feed <span className="text-cyan-300">As of {currentDate}</span></span>
           </div>
 
-          {/* Active Factors - Same design as Definitions */}
+          {/* Active Factors - Purple tint */}
           <button 
             onClick={() => setIsFactorsOpen(true)}
-            className="px-6 py-3 rounded-full bg-[#2a3a5a] text-gray-200 hover:bg-[#354766] transition-all text-sm font-medium"
+            className="px-6 py-3 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all text-sm font-medium"
           >
             {activeFactorsCount} Active Factors
           </button>
 
-          {/* Time Frame Switcher - Rounded pill buttons */}
+          {/* Time Frame Switcher - Electric blue active, hover effect for inactive */}
           <div className="flex gap-2">
             {TIME_FRAMES.map((tf) => (
               <button
@@ -111,8 +111,8 @@ export function DashboardControls() {
                 onClick={() => setSelectedTimeFrame(tf)}
                 className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                   selectedTimeFrame === tf
-                    ? 'bg-cyan-500 text-black'
-                    : 'bg-[#1a2332] text-gray-400 hover:text-white hover:bg-[#232d3f]'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {tf}

@@ -21,7 +21,7 @@ const EMPTY_FACTORS: FactorData[] = [
 function ReturnCell({ value }: { value: number | null }) {
   if (value === null) {
     return (
-      <div className="px-4 py-2 rounded-lg bg-[#1a2332] text-gray-500 text-sm font-medium text-center min-w-[80px]">
+      <div className="px-4 py-2 rounded-lg bg-[#1a2332] text-gray-500 text-sm font-mono text-center min-w-[80px]">
         --
       </div>
     );
@@ -44,7 +44,7 @@ function ReturnCell({ value }: { value: number | null }) {
   const formatted = `${isPositive ? '+' : ''}${value.toFixed(2)}%`;
 
   return (
-    <div className={`px-4 py-2 rounded-lg ${bgColor} ${textColor} text-sm font-medium text-center min-w-[80px]`}>
+    <div className={`px-4 py-2 rounded-lg ${bgColor} ${textColor} text-sm font-mono text-center min-w-[80px]`}>
       {formatted}
     </div>
   );
@@ -63,7 +63,7 @@ export function FactorFocusCard() {
   // }, []);
 
   return (
-    <div className="bg-[#151d2a] rounded-[2rem] p-8 shadow-2xl">
+    <div style={{ marginTop: '20px' }} className="bg-[#1a2332] rounded-[2rem] p-8 shadow-2xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
@@ -76,7 +76,7 @@ export function FactorFocusCard() {
       </div>
 
       {/* Content Card */}
-      <div className="bg-[#0d1321] rounded-2xl p-6">
+      <div className="rounded-2xl p-6">
         {/* Table Header */}
         <div className="flex items-center justify-between mb-4 px-4">
           <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider w-1/2">Factor</span>
