@@ -88,10 +88,17 @@ export function DashboardControls() {
 
           {/* Live Feed + Date combined - Cyan for digital/real-time feel */}
           <div className="flex items-center gap-3 text-cyan-400 text-sm">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
+            <div 
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '35%',
+                backgroundColor: '#22c55e',
+                animation: 'pulse 1.5s ease-in-out infinite',
+                boxShadow: '0 0 8px #22c55e',
+                flexShrink: 0
+              }}
+            ></div>
             <span>Live Feed <span className="text-cyan-300">As of {currentDate}</span></span>
           </div>
 
