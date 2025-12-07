@@ -8,10 +8,9 @@ interface ModalProps {
   icon?: React.ReactNode;
   subtitle?: string;
   children: React.ReactNode;
-  maxWidth?: string;
 }
 
-export function Modal({ isOpen, onClose, title, icon, subtitle, children, maxWidth = 'max-w-2xl' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, icon, subtitle, children }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
