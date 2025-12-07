@@ -1,14 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  icon?: React.ReactNode;
+  subtitle?: string;
   children: React.ReactNode;
   maxWidth?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, icon, subtitle, children, maxWidth = 'max-w-2xl' }: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -20,37 +25,48 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl'
     };
   }, [isOpen]);
 
+  // Handle click outside modal content
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div 
+      className="fixed left-0 right-0 bottom-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm overflow-y-auto"
+      style={{ top: '56px' }}
+      onClick={handleBackdropClick}
+    >
       <div 
-        className={`bg-card-bg border border-gray-800 rounded-xl shadow-2xl w-full ${maxWidth} max-h-[85vh] flex flex-col animate-in fade-in zoom-in duration-200`}
+        ref={modalRef}
+        className="bg-[#0d1321] border border-gray-800/50 rounded-2xl shadow-2xl w-full max-w-[92%] max-h-[calc(100vh-80px)] flex flex-col mt-4 mb-8 overflow-hidden"
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-800">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
+        {/* Header - Fixed */}
+        <div className="flex items-start justify-between px-8 pt-6 pb-4 border-b border-gray-800/30 shrink-0">
+          <div className="flex items-center gap-3">
+            {icon && <span className="text-3xl">{icon}</span>}
+            <div>
+              <h2 className="text-2xl font-bold text-white">{title}</h2>
+              {subtitle && <p className="text-gray-400 text-sm mt-1">{subtitle}</p>}
+            </div>
+          </div>
           <button 
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1"
+            style={{ backgroundColor: '#ef4444', color: '#ffffff' }}
+            className="hover:opacity-80 transition-all p-2 rounded-full"
             aria-label="Close"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-6 h-6" strokeWidth={2.5} />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        {/* Content - Scrollable */}
+        <div className="px-8 py-6 overflow-y-scroll flex-1 custom-scrollbar" style={{ scrollbarWidth: 'thin', scrollbarColor: '#4b5563 #1a2332' }}>
           {children}
-        </div>
-        <div className="p-6 border-t border-gray-800 bg-card-bg/50 rounded-b-xl flex justify-end">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-medium rounded-lg transition-colors"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>

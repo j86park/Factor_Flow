@@ -16,14 +16,46 @@ interface Factor {
 
 const TIME_FRAMES = ['1D', '5D', '1M', '3M', '6M', '12M'];
 
+// Mock definitions data
+const MOCK_DEFINITIONS: Definition[] = [
+  {
+    term: 'Factor',
+    description: 'A simple grouping mechanism for stocks that share similar attributes. Think of it like a "style" (cheap, fast-growing, steady, etc.) that tend to explain historical returns.',
+    example: 'The Value factor looks for stocks that are cheap compared to their earnings or assets. Growth Rates, Subsectors, Regimes like WORK FROM HOME can all be factors.'
+  },
+  {
+    term: 'Z-Score',
+    description: 'A way to see how unusual today\'s number is versus its own history. It tells you how far above or below average something is.',
+    example: 'If a factor\'s Z-Score is +2.5, it\'s much higher than usual (stretched). A Z-Score of -2.0 means it\'s much lower than usual (beaten down).'
+  }
+];
+
+// Mock factors data
+const MOCK_FACTORS: Factor[] = [
+  {
+    name: 'Agg',
+    description: 'Agricultural commodities and farming equipment. Food security and weather-dependent.',
+    category: 'Sector'
+  },
+  {
+    name: 'AI Adopters Early',
+    description: 'Companies deploying AI to improve margins and productivity. Efficiency gains from AI tools.',
+    category: 'Theme'
+  },
+  {
+    name: 'AI Private Credit',
+    description: 'Private credit funds focused on AI-related investments. Exposure to private debt financing in the AI sector.',
+    category: 'Theme'
+  }
+];
+
 export function DashboardControls() {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState('1D');
   const [isDefinitionsOpen, setIsDefinitionsOpen] = useState(false);
   const [isFactorsOpen, setIsFactorsOpen] = useState(false);
   
-  const [definitions, setDefinitions] = useState<Definition[]>([]);
-  const [factors, setFactors] = useState<Factor[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [definitions] = useState<Definition[]>(MOCK_DEFINITIONS);
+  const [factors] = useState<Factor[]>(MOCK_FACTORS);
   const [currentDate, setCurrentDate] = useState('');
 
   // The active factors count is now dynamically based on the fetched factors
@@ -56,31 +88,6 @@ export function DashboardControls() {
 
   useEffect(() => {
     setCurrentDate(getLastMarketDay());
-
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        
-        const [defsRes, factorsRes] = await Promise.all([
-          fetch(`${baseUrl}/api/definitions`),
-          fetch(`${baseUrl}/api/factors`)
-        ]);
-
-        if (defsRes.ok) {
-          setDefinitions(await defsRes.json());
-        }
-        if (factorsRes.ok) {
-          setFactors(await factorsRes.json());
-        }
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
 
     const interval = setInterval(() => {
       const newDate = getLastMarketDay();
@@ -165,29 +172,30 @@ export function DashboardControls() {
         isOpen={isDefinitionsOpen}
         onClose={() => setIsDefinitionsOpen(false)}
         title="Trading Definitions"
+        icon="📚"
+        subtitle="Key concepts and metrics explained"
       >
-        <div className="text-gray-400 mb-6">Key concepts and metrics explained</div>
         <div className="space-y-6">
           {definitions.map((def, idx) => (
-            <div key={idx} className="bg-[#0a0e14] rounded-xl p-5 border border-gray-800">
-              <h3 className="text-cyan-400 font-bold text-lg mb-2 bg-cyan-950/30 inline-block px-3 py-1 rounded-md">
+            <div key={idx} className="bg-[#151d2a] rounded-2xl p-6 border border-gray-800/30">
+              <h3 className="text-cyan-400 font-bold text-lg mb-3 bg-cyan-900/40 inline-block px-4 py-1.5 rounded-lg">
                 {def.term}
               </h3>
-              <p className="text-gray-300 leading-relaxed mb-4">
+              <p className="text-gray-300 leading-relaxed mb-5 text-base">
                 {def.description}
               </p>
-              <div className="bg-[#1a1f2e] rounded-lg p-4 border-l-4 border-indigo-500">
-                <div className="flex items-start gap-2">
-                  <span className="text-yellow-400 mt-0.5">💡</span>
+              <div className="bg-[#1a2640] rounded-xl p-5 border-l-4 border-blue-500">
+                <div className="flex items-start gap-3">
+                  <span className="text-yellow-400 text-lg mt-0.5">💡</span>
                   <div>
-                    <span className="text-indigo-400 text-xs font-bold uppercase tracking-wider block mb-1">Example</span>
-                    <p className="text-sm text-gray-400">{def.example}</p>
+                    <span className="text-blue-400 text-xs font-bold uppercase tracking-wider block mb-2">Example</span>
+                    <p className="text-sm text-gray-400 leading-relaxed">{def.example}</p>
                   </div>
                 </div>
               </div>
             </div>
           ))}
-          {definitions.length === 0 && !isLoading && (
+          {definitions.length === 0 && (
             <p className="text-center text-gray-500 py-8">No definitions loaded.</p>
           )}
         </div>
@@ -197,25 +205,24 @@ export function DashboardControls() {
         isOpen={isFactorsOpen}
         onClose={() => setIsFactorsOpen(false)}
         title="Factor Library"
-        maxWidth="max-w-4xl"
+        icon="📊"
+        subtitle={`${activeFactorsCount} factors available`}
       >
-        <div className="text-gray-400 mb-6">{activeFactorsCount} factors available</div>
-        
+        {/* Search Bar */}
         <div className="relative mb-6">
+          <span className="absolute left-4 top-3.5 text-gray-500">🔍</span>
           <input 
             type="text" 
             placeholder="Search factors..." 
-            className="w-full bg-[#0a0e14] border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+            className="w-full bg-[#0a0e14] border border-gray-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
           />
-          <svg className="absolute right-4 top-3.5 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
         </div>
 
+        {/* Factor List */}
         <div className="space-y-3">
           {factors.map((factor, idx) => (
             <div key={idx} className="bg-[#0a0e14]/50 hover:bg-[#0a0e14] transition-colors rounded-xl p-5 border border-gray-800">
-              <h3 className="text-cyan-400 font-bold text-lg mb-1">
+              <h3 className="text-cyan-400 font-bold text-xl mb-2">
                 {factor.name}
               </h3>
               <p className="text-gray-400 text-sm">
@@ -223,7 +230,7 @@ export function DashboardControls() {
               </p>
             </div>
           ))}
-          {factors.length === 0 && !isLoading && (
+          {factors.length === 0 && (
             <p className="text-center text-gray-500 py-8">No factors loaded.</p>
           )}
         </div>
