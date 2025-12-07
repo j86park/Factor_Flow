@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BarChart3 } from 'lucide-react';
 import { Modal } from './Modal';
 
 interface Definition {
@@ -28,9 +29,33 @@ export function DashboardControls() {
   // The active factors count is now dynamically based on the fetched factors
   const activeFactorsCount = factors.length;
 
-  useEffect(() => {
+  // Helper function to get the last market day (weekday)
+  const getLastMarketDay = (): string => {
     const now = new Date();
-    setCurrentDate(now.toISOString().split('T')[0]);
+    const day = now.getDay(); // 0 = Sunday, 6 = Saturday
+    
+    let daysToSubtract = 0;
+    if (day === 0) {
+      // Sunday - go back 2 days to Friday
+      daysToSubtract = 2;
+    } else if (day === 6) {
+      // Saturday - go back 1 day to Friday
+      daysToSubtract = 1;
+    }
+    
+    if (daysToSubtract > 0) {
+      now.setDate(now.getDate() - daysToSubtract);
+    }
+    
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const dayOfMonth = String(now.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${dayOfMonth}`;
+  };
+
+  useEffect(() => {
+    setCurrentDate(getLastMarketDay());
 
     const fetchData = async () => {
       setIsLoading(true);
@@ -58,7 +83,7 @@ export function DashboardControls() {
     fetchData();
 
     const interval = setInterval(() => {
-      const newDate = new Date().toISOString().split('T')[0];
+      const newDate = getLastMarketDay();
       setCurrentDate(prev => newDate !== prev ? newDate : prev);
     }, 60000);
 
@@ -66,33 +91,37 @@ export function DashboardControls() {
   }, []);
 
   return (
-    <div className="w-full mt-10">
-      {/* Dashboard Card Container - with metallic gradient sheen */}
-      <div className="bg-gradient-to-r from-white/5 via-white/10 to-white/5 rounded-[2rem] p-10 md:p-14 shadow-2xl border border-white/5">
+    <div className="w-full" style={{ marginTop: '20px' }}>
+      {/* Dashboard Card Container */}
+      <div className="max-w-[96.5%] mx-auto bg-[#1a2332] rounded-[2rem] p-10 md:p-14 shadow-2xl border border-[#0f1520]">
         
         {/* Title Row - Centered */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-gray-200 tracking-tight mb-10 text-center">
-          Analytics Dashboard
-        </h1>
+        <div className="flex items-center justify-center gap-4 mb-10">
+          <BarChart3 className="w-10 h-10 md:w-12 md:h-12 text-cyan-400" />
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-gray-200 tracking-tight">
+            Analytics Dashboard
+          </h1>
+        </div>
 
         {/* Controls Row - Evenly spread horizontally */}
         <div className="flex flex-wrap items-center justify-center gap-[3rem] px-2">
           {/* Definitions Button - Purple tint */}
           <button 
             onClick={() => setIsDefinitionsOpen(true)}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all text-sm font-medium"
+            style={{ backgroundColor: '#2d2459', color: '#c4b5fd', height: '35px' }}
+            className="flex items-center gap-3 px-6 rounded-full hover:opacity-80 transition-all text-base font-bold"
           >
-            <span className="text-base">📚</span>
+            <span className="text-lg">📚</span>
             <span>Definitions</span>
           </button>
 
           {/* Live Feed + Date combined - Cyan for digital/real-time feel */}
-          <div className="flex items-center gap-3 text-cyan-400 text-sm">
+          <div style={{ height: '35px' }} className="flex items-center gap-4 text-cyan-400 text-base font-bold">
             <div 
               style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '35%',
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
                 backgroundColor: '#22c55e',
                 animation: 'pulse 1.5s ease-in-out infinite',
                 boxShadow: '0 0 8px #22c55e',
@@ -105,22 +134,24 @@ export function DashboardControls() {
           {/* Active Factors - Purple tint */}
           <button 
             onClick={() => setIsFactorsOpen(true)}
-            className="px-6 py-3 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all text-sm font-medium"
+            style={{ backgroundColor: '#2d2459', color: '#c4b5fd', height: '35px' }}
+            className="px-6 rounded-full hover:opacity-80 transition-all text-base font-bold flex items-center"
           >
             {activeFactorsCount} Active Factors
           </button>
 
-          {/* Time Frame Switcher - Electric blue active, hover effect for inactive */}
-          <div className="flex gap-2">
+          {/* Time Frame Switcher - Cyan active, dark inactive */}
+          <div className="flex gap-4">
             {TIME_FRAMES.map((tf) => (
               <button
                 key={tf}
                 onClick={() => setSelectedTimeFrame(tf)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
-                  selectedTimeFrame === tf
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
-                }`}
+                style={
+                  selectedTimeFrame === tf 
+                    ? { backgroundColor: '#22d3ee', color: '#000000', width: '54px', height: '35px' } 
+                    : { backgroundColor: '#1e2a3a', color: '#d1d5db', width: '54px', height: '35px' }
+                }
+                className="rounded-full text-lg font-bold transition-all duration-200 hover:opacity-80 flex items-center justify-center"
               >
                 {tf}
               </button>

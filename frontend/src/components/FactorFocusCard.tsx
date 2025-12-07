@@ -63,7 +63,7 @@ export function FactorFocusCard() {
   // }, []);
 
   return (
-    <div style={{ marginTop: '20px' }} className="bg-[#1a2332] rounded-[2rem] p-8 shadow-2xl">
+    <div style={{ marginTop: '20px' }} className="max-w-[96.5%] mx-auto bg-[#1a2332] rounded-[2rem] p-8 shadow-2xl border border-[#0f1520]">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
