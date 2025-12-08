@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Target } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface FactorData {
   name: string;
@@ -52,6 +54,7 @@ function ReturnCell({ value }: { value: number | null }) {
 
 export function FactorFocusCard() {
   const [factors] = useState<FactorData[]>(EMPTY_FACTORS);
+  const [isRotationOpen, setIsRotationOpen] = useState(false);
 
   // In the future, you can add setFactors back and fetch real factor data from the backend
   // useEffect(() => {
@@ -65,14 +68,22 @@ export function FactorFocusCard() {
   return (
     <div style={{ marginTop: '20px' }} className="max-w-[96.5%] mx-auto bg-[#1a2332] rounded-[2rem] p-8 shadow-2xl border border-[#0f1520]">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
-          <span className="text-2xl">⭐</span>
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">Factor Focus of the Week</h2>
-          <p className="text-gray-400 text-sm">Key factors to watch</p>
-        </div>
+      <div className="mb-8 flex items-center justify-between">
+        <h2 className="text-2xl md:text-3xl font-bold text-white leading-none">
+          Factor Focus of the Week
+          <br />
+          <span style={{ fontSize: '0.75rem', display: 'block', marginTop: '-0.25rem' }} className="text-gray-400 font-normal">Key factors to watch</span>
+        </h2>
+        
+        {/* Factor Rotation Button */}
+        <button
+          onClick={() => setIsRotationOpen(true)}
+          style={{ backgroundColor: '#2d2459', color: '#c4b5fd', marginTop: '12px' }}
+          className="flex items-center gap-3 px-6 py-3 rounded-full hover:opacity-80 transition-all font-bold self-start"
+        >
+          <Target className="w-5 h-5" />
+          <span>Factor Rotation</span>
+        </button>
       </div>
 
       {/* Content Card */}
@@ -104,6 +115,20 @@ export function FactorFocusCard() {
           ))}
         </div>
       </div>
+
+      {/* Factor Rotation Modal */}
+      <Modal
+        isOpen={isRotationOpen}
+        onClose={() => setIsRotationOpen(false)}
+        title="Factor Rotation"
+        subtitle="Analyze factor performance trends"
+      >
+        <div className="space-y-6">
+          <p className="text-gray-300 text-center py-8">
+            Factor rotation analysis content will go here...
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

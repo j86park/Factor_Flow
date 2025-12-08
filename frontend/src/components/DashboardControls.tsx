@@ -172,7 +172,6 @@ export function DashboardControls() {
         isOpen={isDefinitionsOpen}
         onClose={() => setIsDefinitionsOpen(false)}
         title="Trading Definitions"
-        icon="📚"
         subtitle="Key concepts and metrics explained"
       >
         <div className="space-y-6">
@@ -205,16 +204,14 @@ export function DashboardControls() {
         isOpen={isFactorsOpen}
         onClose={() => setIsFactorsOpen(false)}
         title="Factor Library"
-        icon="📊"
         subtitle={`${activeFactorsCount} factors available`}
       >
         {/* Search Bar */}
         <div className="relative mb-6">
-          <span className="absolute left-4 top-3.5 text-gray-500">🔍</span>
           <input 
             type="text" 
             placeholder="Search factors..." 
-            className="w-full bg-[#0a0e14] border border-gray-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+            className="w-full bg-[#0a0e14] border border-gray-700 rounded-xl py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
           />
         </div>
 

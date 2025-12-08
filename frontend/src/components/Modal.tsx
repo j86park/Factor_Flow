@@ -5,12 +5,11 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  icon?: React.ReactNode;
   subtitle?: string;
   children: React.ReactNode;
 }
 
-export function Modal({ isOpen, onClose, title, icon, subtitle, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, subtitle, children }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,20 +34,29 @@ export function Modal({ isOpen, onClose, title, icon, subtitle, children }: Moda
 
   return (
     <div 
-      className="fixed left-0 right-0 bottom-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm overflow-y-auto"
-      style={{ top: '56px' }}
+      className="z-50 bg-black/70 backdrop-blur-sm overflow-y-auto"
+      style={{ 
+        position: 'fixed',
+        top: '56px',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        display: 'grid',
+        placeItems: 'start center',
+        padding: '16px 0 32px 0'
+      }}
       onClick={handleBackdropClick}
     >
       <div 
         ref={modalRef}
-        className="bg-[#0d1321] border border-gray-800/50 rounded-2xl shadow-2xl w-full max-w-[92%] max-h-[calc(100vh-80px)] flex flex-col mt-4 mb-8 overflow-hidden"
+        className="bg-[#0d1321] border border-gray-800/50 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ width: '1280px', maxWidth: '85vw', height: 'calc(100vh - 120px)', maxHeight: '85vh' }}
         role="dialog"
         aria-modal="true"
       >
         {/* Header - Fixed */}
         <div className="flex items-start justify-between px-8 pt-6 pb-4 border-b border-gray-800/30 shrink-0">
           <div className="flex items-center gap-3">
-            {icon && <span className="text-3xl">{icon}</span>}
             <div>
               <h2 className="text-2xl font-bold text-white">{title}</h2>
               {subtitle && <p className="text-gray-400 text-sm mt-1">{subtitle}</p>}
