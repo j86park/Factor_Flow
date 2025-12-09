@@ -100,7 +100,7 @@ export function DashboardControls() {
   return (
     <div className="w-full" style={{ marginTop: '20px' }}>
       {/* Dashboard Card Container */}
-      <div className="max-w-[96.5%] mx-auto bg-[#1a2332] rounded-[2rem] p-10 md:p-14 shadow-2xl border border-[#0f1520]">
+      <div className="max-w-[96.5%] mx-auto bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-10 md:p-14 shadow-2xl border border-[#0a0d11]">
         
         {/* Title Row - Centered */}
         <div className="flex items-center justify-center gap-4 mb-10">
