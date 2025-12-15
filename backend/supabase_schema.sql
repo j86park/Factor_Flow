@@ -2,14 +2,7 @@
 -- Run this in your Supabase SQL Editor (Dashboard > SQL Editor > New Query)
 
 -- Create definitions table
-CREATE TABLE IF NOT EXISTS definitions (
-    id BIGSERIAL PRIMARY KEY,
-    term TEXT NOT NULL UNIQUE,
-    description TEXT NOT NULL,
-    example TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
-);
+
 
 -- Create factors table
 CREATE TABLE IF NOT EXISTS factors (

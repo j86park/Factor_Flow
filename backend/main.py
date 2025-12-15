@@ -1,7 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI()
 
@@ -14,6 +20,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
+
+supabase: Client | None = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"Warning: Could not initialize Supabase client: {e}")
+
 # Data Models
 class Definition(BaseModel):
     term: str
@@ -25,8 +42,8 @@ class Factor(BaseModel):
     description: str
     category: str
 
-# Mock Data (In a real app, this would come from a DB)
-DEFINITIONS_DATA = [
+# Fallback mock data (used if Supabase is not configured)
+FALLBACK_DEFINITIONS_DATA = [
     {
         "term": "Factor",
         "description": "A simple grouping mechanism for stocks that share similar attributes. Think of it like a \"style\" (cheap, fast-growing, steady, etc.) that tend to explain historical returns.",
@@ -67,7 +84,29 @@ def health_check():
 
 @app.get("/api/definitions", response_model=List[Definition])
 def get_definitions():
-    return DEFINITIONS_DATA
+    """Fetch definitions from Supabase database."""
+    if supabase:
+        try:
+            # Fetch definitions from Supabase
+            response = supabase.table("definitions").select("definition_name, definition_desc, definition_example").execute()
+            
+            # Map Supabase fields to API response format
+            definitions = []
+            for row in response.data:
+                definitions.append({
+                    "term": row["definition_name"],
+                    "description": row["definition_desc"] or "",
+                    "example": row.get("definition_example") or ""  # Use definition_example field from database
+                })
+            
+            return definitions
+        except Exception as e:
+            print(f"Error fetching definitions from Supabase: {e}")
+            # Fall back to mock data if Supabase fails
+            return FALLBACK_DEFINITIONS_DATA
+    else:
+        # Return fallback data if Supabase is not configured
+        return FALLBACK_DEFINITIONS_DATA
 
 @app.get("/api/factors", response_model=List[Factor])
 def get_factors():

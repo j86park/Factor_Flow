@@ -16,19 +16,8 @@ interface Factor {
 
 const TIME_FRAMES = ['1D', '5D', '1M', '3M', '6M', '12M'];
 
-// Mock definitions data
-const MOCK_DEFINITIONS: Definition[] = [
-  {
-    term: 'Factor',
-    description: 'A simple grouping mechanism for stocks that share similar attributes. Think of it like a "style" (cheap, fast-growing, steady, etc.) that tend to explain historical returns.',
-    example: 'The Value factor looks for stocks that are cheap compared to their earnings or assets. Growth Rates, Subsectors, Regimes like WORK FROM HOME can all be factors.'
-  },
-  {
-    term: 'Z-Score',
-    description: 'A way to see how unusual today\'s number is versus its own history. It tells you how far above or below average something is.',
-    example: 'If a factor\'s Z-Score is +2.5, it\'s much higher than usual (stretched). A Z-Score of -2.0 means it\'s much lower than usual (beaten down).'
-  }
-];
+// API endpoint - adjust if your backend runs on a different port
+const API_BASE_URL = 'http://localhost:8000';
 
 // Mock factors data
 const MOCK_FACTORS: Factor[] = [
@@ -54,9 +43,11 @@ export function DashboardControls() {
   const [isDefinitionsOpen, setIsDefinitionsOpen] = useState(false);
   const [isFactorsOpen, setIsFactorsOpen] = useState(false);
   
-  const [definitions] = useState<Definition[]>(MOCK_DEFINITIONS);
+  const [definitions, setDefinitions] = useState<Definition[]>([]);
   const [factors] = useState<Factor[]>(MOCK_FACTORS);
   const [currentDate, setCurrentDate] = useState('');
+  const [definitionsLoading, setDefinitionsLoading] = useState(false);
+  const [definitionsError, setDefinitionsError] = useState<string | null>(null);
 
   // The active factors count is now dynamically based on the fetched factors
   const activeFactorsCount = factors.length;
@@ -95,6 +86,30 @@ export function DashboardControls() {
     }, 60000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch definitions from Supabase via backend API
+  useEffect(() => {
+    const fetchDefinitions = async () => {
+      setDefinitionsLoading(true);
+      setDefinitionsError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/definitions`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch definitions: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setDefinitions(data);
+      } catch (error) {
+        console.error('Error fetching definitions:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Failed to load definitions';
+        setDefinitionsError(`${errorMsg}. Check that backend is running on ${API_BASE_URL}`);
+      } finally {
+        setDefinitionsLoading(false);
+      }
+    };
+
+    fetchDefinitions();
   }, []);
 
   return (
@@ -175,7 +190,15 @@ export function DashboardControls() {
         subtitle="Key concepts and metrics explained"
       >
         <div className="space-y-6">
-          {definitions.map((def, idx) => (
+          {definitionsLoading && (
+            <p className="text-center text-gray-400 py-8">Loading definitions...</p>
+          )}
+          {definitionsError && (
+            <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4">
+              <p className="text-red-400 text-center">Error: {definitionsError}</p>
+            </div>
+          )}
+          {!definitionsLoading && !definitionsError && definitions.map((def, idx) => (
             <div key={idx} className="bg-[#151d2a] rounded-2xl p-6 border border-gray-800/30">
               <h3 className="text-cyan-400 font-bold text-lg mb-3 bg-cyan-900/40 inline-block px-4 py-1.5 rounded-lg">
                 {def.term}
@@ -183,18 +206,20 @@ export function DashboardControls() {
               <p className="text-gray-300 leading-relaxed mb-5 text-base">
                 {def.description}
               </p>
-              <div className="bg-[#1a2640] rounded-xl p-5 border-l-4 border-blue-500">
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-400 text-lg mt-0.5">💡</span>
-                  <div>
-                    <span className="text-blue-400 text-xs font-bold uppercase tracking-wider block mb-2">Example</span>
-                    <p className="text-sm text-gray-400 leading-relaxed">{def.example}</p>
+              {def.example && (
+                <div className="bg-[#1a2640] rounded-xl p-5 border-l-4 border-blue-500">
+                  <div className="flex items-start gap-3">
+                    <span className="text-yellow-400 text-lg mt-0.5">💡</span>
+                    <div>
+                      <span className="text-blue-400 text-xs font-bold uppercase tracking-wider block mb-2">Example</span>
+                      <p className="text-sm text-gray-400 leading-relaxed">{def.example}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           ))}
-          {definitions.length === 0 && (
+          {!definitionsLoading && !definitionsError && definitions.length === 0 && (
             <p className="text-center text-gray-500 py-8">No definitions loaded.</p>
           )}
         </div>

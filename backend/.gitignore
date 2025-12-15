@@ -10,12 +10,14 @@ __pycache__/
 venv/
 env/
 ENV/
-
+seed_supabase.py
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+
+.sql
 
 
 
