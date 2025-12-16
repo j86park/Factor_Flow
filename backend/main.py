@@ -21,15 +21,24 @@ app.add_middleware(
 )
 
 # Initialize Supabase client
+# IMPORTANT: Service role key is required for write operations
+# The anon key lacks write permissions and will cause permission errors
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 supabase: Client | None = None
-if SUPABASE_URL and SUPABASE_KEY:
+if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     except Exception as e:
         print(f"Warning: Could not initialize Supabase client: {e}")
+        print("Note: Service role key is required for database operations.")
+else:
+    if not SUPABASE_URL:
+        print("Warning: SUPABASE_URL not set. Supabase features will be disabled.")
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        print("Warning: SUPABASE_SERVICE_ROLE_KEY not set. Supabase features will be disabled.")
+        print("Note: Service role key is required for write operations. Anon key will not work.")
 
 # Data Models
 class Definition(BaseModel):
