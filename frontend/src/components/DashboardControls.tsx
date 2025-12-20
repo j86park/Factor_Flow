@@ -11,7 +11,7 @@ interface Definition {
 interface Factor {
   name: string;
   description: string;
-  category: string;
+  type?: string;
 }
 
 const TIME_FRAMES = ['1D', '5D', '1M', '3M', '6M', '12M'];
@@ -19,37 +19,20 @@ const TIME_FRAMES = ['1D', '5D', '1M', '3M', '6M', '12M'];
 // API endpoint - adjust if your backend runs on a different port
 const API_BASE_URL = 'http://localhost:8000';
 
-// Mock factors data
-const MOCK_FACTORS: Factor[] = [
-  {
-    name: 'Agg',
-    description: 'Agricultural commodities and farming equipment. Food security and weather-dependent.',
-    category: 'Sector'
-  },
-  {
-    name: 'AI Adopters Early',
-    description: 'Companies deploying AI to improve margins and productivity. Efficiency gains from AI tools.',
-    category: 'Theme'
-  },
-  {
-    name: 'AI Private Credit',
-    description: 'Private credit funds focused on AI-related investments. Exposure to private debt financing in the AI sector.',
-    category: 'Theme'
-  }
-];
-
 export function DashboardControls() {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState('1D');
   const [isDefinitionsOpen, setIsDefinitionsOpen] = useState(false);
   const [isFactorsOpen, setIsFactorsOpen] = useState(false);
   
   const [definitions, setDefinitions] = useState<Definition[]>([]);
-  const [factors] = useState<Factor[]>(MOCK_FACTORS);
+  const [factors, setFactors] = useState<Factor[]>([]);
   const [currentDate, setCurrentDate] = useState('');
   const [definitionsLoading, setDefinitionsLoading] = useState(false);
   const [definitionsError, setDefinitionsError] = useState<string | null>(null);
+  const [factorsLoading, setFactorsLoading] = useState(true);
+  const [factorsError, setFactorsError] = useState<string | null>(null);
 
-  // The active factors count is now dynamically based on the fetched factors
+  // The active factors count is dynamically based on the fetched backend data
   const activeFactorsCount = factors.length;
 
   // Helper function to get the last market day (weekday)
@@ -110,6 +93,30 @@ export function DashboardControls() {
     };
 
     fetchDefinitions();
+  }, []);
+
+  // Fetch factors from Supabase via backend API
+  useEffect(() => {
+    const fetchFactors = async () => {
+      setFactorsLoading(true);
+      setFactorsError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/factors`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch factors: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setFactors(data);
+      } catch (error) {
+        console.error('Error fetching factors:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Failed to load factors';
+        setFactorsError(`${errorMsg}. Check that backend is running on ${API_BASE_URL}`);
+      } finally {
+        setFactorsLoading(false);
+      }
+    };
+
+    fetchFactors();
   }, []);
 
   return (
@@ -242,19 +249,32 @@ export function DashboardControls() {
 
         {/* Factor List */}
         <div className="space-y-3">
-          {factors.map((factor, idx) => (
+          {factorsLoading && (
+            <p className="text-center text-gray-400 py-8">Loading factors...</p>
+          )}
+          {factorsError && (
+            <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4">
+              <p className="text-red-400 text-center">Error: {factorsError}</p>
+            </div>
+          )}
+          {!factorsLoading && !factorsError && factors.length === 0 && (
+            <p className="text-center text-gray-500 py-8">No factors loaded.</p>
+          )}
+          {!factorsLoading && !factorsError && factors.map((factor, idx) => (
             <div key={idx} className="bg-[#0a0e14]/50 hover:bg-[#0a0e14] transition-colors rounded-xl p-5 border border-gray-800">
               <h3 className="text-cyan-400 font-bold text-xl mb-2">
                 {factor.name}
               </h3>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-sm mb-2">
                 {factor.description}
               </p>
+              {factor.type && (
+                <span className="text-xs uppercase tracking-wider text-cyan-200 bg-white/5 px-3 py-1 rounded-full inline-flex">
+                  {factor.type}
+                </span>
+              )}
             </div>
           ))}
-          {factors.length === 0 && (
-            <p className="text-center text-gray-500 py-8">No factors loaded.</p>
-          )}
         </div>
       </Modal>
     </div>

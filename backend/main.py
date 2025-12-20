@@ -49,7 +49,8 @@ class Definition(BaseModel):
 class Factor(BaseModel):
     name: str
     description: str
-    category: str
+    type: str | None = None
+
 
 # Fallback mock data (used if Supabase is not configured)
 FALLBACK_DEFINITIONS_DATA = [
@@ -69,17 +70,17 @@ FACTORS_DATA = [
     {
         "name": "Agg",
         "description": "Agricultural commodities and farming equipment. Food security and weather-dependent.",
-        "category": "Sector"
+        "type": "THEMATIC",
     },
     {
         "name": "AI Adopters Early",
         "description": "Companies deploying AI to improve margins and productivity. Efficiency gains from AI tools.",
-        "category": "Theme"
+        "type": "THEMATIC",
     },
     {
         "name": "AI Theme Winners",
         "description": "Direct beneficiaries of AI adoption across sectors. Includes infrastructure, chips, and applications.",
-        "category": "Theme"
+        "type": "THEMATIC",
     }
 ]
 
@@ -119,4 +120,19 @@ def get_definitions():
 
 @app.get("/api/factors", response_model=List[Factor])
 def get_factors():
+    """Fetch factors from Supabase"""
+    if supabase:
+        try:
+            response = supabase.table("factors").select("name, description, type").execute()
+            factors = []
+            for row in response.data:
+                factors.append({
+                    "name": row["name"],
+                    "description": row.get("description") or "",
+                    "type": row.get("type") or ""
+                })
+            return factors
+        except Exception as e:
+            print(f"Error fetching factors from Supabase: {e}")
+            return FACTORS_DATA
     return FACTORS_DATA

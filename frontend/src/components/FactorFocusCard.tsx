@@ -69,15 +69,6 @@ export function FactorFocusCard() {
   const [categories] = useState<CategoryData[]>(EMPTY_CATEGORIES);
   const [isRotationOpen, setIsRotationOpen] = useState(false);
 
-  // In the future, you can add setCategories back and fetch real factor data from the backend
-  // useEffect(() => {
-  //   const fetchFactors = async () => {
-  //     const res = await fetch('/api/factor-focus');
-  //     if (res.ok) setCategories(await res.json());
-  //   };
-  //   fetchFactors();
-  // }, []);
-
   return (
     <div style={{ marginTop: '20px' }} className="max-w-[96.5%] mx-auto bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-8 shadow-2xl border border-[#0a0d11]">
       {/* Header */}
@@ -99,46 +90,45 @@ export function FactorFocusCard() {
         </button>
       </div>
 
-      {/* Content Card - Centered */}
-      <div className="flex justify-center">
-        <div className="w-auto">
-          {categories.map((category, catIdx) => (
-            <div key={catIdx} className="mb-8 bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[4rem] p-[60px]">
-              <div className="px-[30px]">
-                {/* Category Title */}
-                <h3 className="text-2xl font-bold text-indigo-400 mb-[30px]">{category.category}</h3>
-                
-                {/* Table Header */}
-                <div className="flex items-center mb-[20px]">
-                  <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider min-w-[300px]">Factor</span>
-                  <div className="flex gap-[18px]">
-                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1D</span>
-                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">5D</span>
-                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1M</span>
+        <div className="flex justify-center">
+          <div className="w-auto">
+            {categories.map((category, catIdx) => (
+              <div key={catIdx} className="mb-8 bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[4rem] p-[60px]">
+                <div className="px-[30px]">
+                  {/* Category Title */}
+                  <h3 className="text-2xl font-bold text-indigo-400 mb-[30px]">{category.category}</h3>
+                  
+                  {/* Table Header */}
+                  <div className="flex items-center mb-[20px]">
+                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider min-w-[300px]">Factor</span>
+                    <div className="flex gap-[18px]">
+                      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1D</span>
+                      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">5D</span>
+                      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1M</span>
+                    </div>
+                  </div>
+
+                  {/* Factor Rows */}
+                  <div className="space-y-[15px]">
+                    {category.factors.map((factor, idx) => (
+                      <div 
+                        key={idx} 
+                        className="flex items-center py-[15px] hover:bg-[#1a2332]/30 transition-colors rounded-lg"
+                      >
+                        <span className="text-white font-medium text-base min-w-[300px]">{factor.name}</span>
+                        <div className="flex gap-[18px]">
+                          <div className="w-[120px]"><ReturnCell value={factor.returns['1D']} /></div>
+                          <div className="w-[120px]"><ReturnCell value={factor.returns['5D']} /></div>
+                          <div className="w-[120px]"><ReturnCell value={factor.returns['1M']} /></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-
-                {/* Factor Rows */}
-                <div className="space-y-[15px]">
-                  {category.factors.map((factor, idx) => (
-                    <div 
-                      key={idx} 
-                      className="flex items-center py-[15px] hover:bg-[#1a2332]/30 transition-colors rounded-lg"
-                    >
-                      <span className="text-white font-medium text-base min-w-[300px]">{factor.name}</span>
-                      <div className="flex gap-[18px]">
-                        <div className="w-[120px]"><ReturnCell value={factor.returns['1D']} /></div>
-                        <div className="w-[120px]"><ReturnCell value={factor.returns['5D']} /></div>
-                        <div className="w-[120px]"><ReturnCell value={factor.returns['1M']} /></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
       {/* Factor Rotation Modal */}
       <Modal
