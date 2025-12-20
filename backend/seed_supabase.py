@@ -10,6 +10,7 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from typing import List, Dict
+from factors import ALL_FACTORS
 
 # Load environment variables from .env file
 load_dotenv()
@@ -191,21 +192,39 @@ def insert_definitions(definitions: List[Dict]):
         print(f"❌ Error inserting definitions: {e}")
         raise
 
-
-# def insert_factors(factors: List[Dict]):
-#     """Insert factors into the 'factors' table."""
-#     try:
-#         # Delete existing data (optional - comment out if you want to keep existing data)
-#         # supabase.table("factors").delete().neq("id", 0).execute()
-#         
-#         # Insert new data
-#         result = supabase.table("factors").insert(factors).execute()
-#         print(f"✅ Successfully inserted {len(factors)} factors")
-#         return result
-#     except Exception as e:
-#         print(f"❌ Error inserting factors: {e}")
-#         raise
-
+def insert_factors(factors: List[Dict]):
+    """Insert factors into the 'factors' table."""
+    
+    try:
+        inserted_count = 0
+        updated_count = 0
+        
+        for factor in factors:
+            # Check if factor already exists
+            existing = supabase.table("factors").select("id").eq("name", factor["name"]).execute()
+            
+            if existing.data:
+                # Update existing record
+                update_data = {
+                    "description": factor["description"],
+                    "type": factor["type"],
+                    "logic_config": factor["logic_config"],
+                    "is_active": factor["is_active"]
+                }
+                supabase.table("factors").update(update_data).eq("name", factor["name"]).execute()
+                updated_count += 1
+            else:
+                # Insert new record
+                supabase.table("factors").insert(factor).execute()
+                inserted_count += 1
+        
+        print(f"✅ Successfully processed {len(factors)} factors:")
+        print(f"   - Inserted: {inserted_count} new factors")
+        print(f"   - Updated: {updated_count} existing factors")
+        return {"inserted": inserted_count, "updated": updated_count}
+    except Exception as e:
+        print(f"❌ Error inserting factors: {e}")
+        raise
 
 def main():
     """Main function to seed the database."""
@@ -221,9 +240,9 @@ def main():
         print("\n📚 Inserting definitions...")
         insert_definitions(DEFINITIONS_DATA)
         
-        # Insert factors (commented out for now)
-        # print("\n📊 Inserting factors...")
-        # insert_factors(FACTORS_DATA)
+        # Insert factors
+        print("\n📊 Inserting factors...")
+        insert_factors(ALL_FACTORS)
         
         print("\n✅ Data seeding completed successfully!")
         
