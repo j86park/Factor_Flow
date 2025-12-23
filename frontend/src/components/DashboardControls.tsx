@@ -31,6 +31,7 @@ export function DashboardControls() {
   const [definitionsError, setDefinitionsError] = useState<string | null>(null);
   const [factorsLoading, setFactorsLoading] = useState(true);
   const [factorsError, setFactorsError] = useState<string | null>(null);
+  const [factorSearch, setFactorSearch] = useState('');
 
   // The active factors count is dynamically based on the fetched backend data
   const activeFactorsCount = factors.length;
@@ -243,6 +244,8 @@ export function DashboardControls() {
           <input 
             type="text" 
             placeholder="Search factors..." 
+            value={factorSearch}
+            onChange={(event) => setFactorSearch(event.target.value)}
             className="w-full bg-[#0a0e14] border border-gray-700 rounded-xl py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
           />
         </div>
@@ -257,24 +260,45 @@ export function DashboardControls() {
               <p className="text-red-400 text-center">Error: {factorsError}</p>
             </div>
           )}
-          {!factorsLoading && !factorsError && factors.length === 0 && (
+          {!factorsLoading && !factorsError && (factors.length === 0) && (
             <p className="text-center text-gray-500 py-8">No factors loaded.</p>
           )}
-          {!factorsLoading && !factorsError && factors.map((factor, idx) => (
-            <div key={idx} className="bg-[#0a0e14]/50 hover:bg-[#0a0e14] transition-colors rounded-xl p-5 border border-gray-800">
-              <h3 className="text-cyan-400 font-bold text-xl mb-2">
-                {factor.name}
-              </h3>
-              <p className="text-gray-400 text-sm mb-2">
-                {factor.description}
-              </p>
-              {factor.type && (
-                <span className="text-xs uppercase tracking-wider text-cyan-200 bg-white/5 px-3 py-1 rounded-full inline-flex">
-                  {factor.type}
-                </span>
-              )}
-            </div>
-          ))}
+          {!factorsLoading && !factorsError && factors.length > 0 && (
+            (() => {
+              const term = factorSearch.trim().toLowerCase();
+              const filtered = term
+                ? factors.filter((factor) =>
+                    factor.name.toLowerCase().includes(term)
+                    || factor.description.toLowerCase().includes(term)
+                    || (factor.type?.toLowerCase().includes(term) ?? false)
+                  )
+                : factors;
+
+              if (filtered.length === 0) {
+                return (
+                  <p className="text-center text-gray-500 py-8">
+                    No factors match “{factorSearch}”.
+                  </p>
+                );
+              }
+
+              return filtered.map((factor, idx) => (
+                <div key={`${factor.name}-${idx}`} className="bg-[#0a0e14]/50 hover:bg-[#0a0e14] transition-colors rounded-xl p-5 border border-gray-800">
+                  <h3 className="text-cyan-400 font-bold text-xl mb-2">
+                    {factor.name}
+                  </h3>
+                  <p className="text-gray-400 text-sm mb-2">
+                    {factor.description}
+                  </p>
+                  {factor.type && (
+                    <span className="text-xs uppercase tracking-wider text-cyan-200 bg-white/5 px-3 py-1 rounded-full inline-flex">
+                      {factor.type}
+                    </span>
+                  )}
+                </div>
+              ));
+            })()
+          )}
         </div>
       </Modal>
     </div>
