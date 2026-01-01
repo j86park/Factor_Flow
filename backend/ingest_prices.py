@@ -66,82 +66,173 @@ def gather_index_tickers() -> List[str]:
     return combined
 
 
-def get_latest_dates_from_db(tickers):
+def get_date_ranges_from_db(tickers):
     """
-    Queries the DB to find the last recorded date for every ticker.
-    Returns a dict: {'NVDA': '2024-10-25', 'AAPL': '2024-10-24'}
+    Queries the DB to find the min and max recorded date for every ticker.
+    Returns a dict: {'NVDA': {'min_date': '2024-01-02', 'max_date': '2025-12-31'}, ...}
     """
-    # We use a RPC (Stored Procedure) for speed, or a simple query for small lists.
-    # For simplicity here, we query the 'view_latest_dates' (we will create this view below)
     try:
+        # Try the view first for max dates
         response = supabase.table("view_latest_stock_dates").select("*").execute()
-        return {row['ticker']: row['max_date'] for row in response.data}
+        max_dates = {row['ticker']: row['max_date'] for row in response.data}
     except Exception as e:
-        print(f"Error fetching dates: {e}")
-        return {}
+        print(f"Error fetching max dates from view: {e}")
+        max_dates = {}
+    
+    # Get min dates by querying stock_prices directly
+    min_dates = {}
+    tickers_with_data = [t for t in tickers if t in max_dates]
+    if tickers_with_data:
+        print(f"Fetching earliest dates for {len(tickers_with_data)} tickers...")
+        for i, ticker in enumerate(tickers_with_data):
+            if (i + 1) % 50 == 0:
+                print(f"   ... checked {i + 1}/{len(tickers_with_data)} tickers")
+            try:
+                response = supabase.table("stock_prices").select("date").eq("ticker", ticker).order("date", desc=False).limit(1).execute()
+                if response.data:
+                    min_dates[ticker] = response.data[0]['date']
+            except Exception as e:
+                print(f"Error fetching min date for {ticker}: {e}")
+    
+    # Combine into single dict
+    result = {}
+    for ticker in set(list(max_dates.keys()) + list(min_dates.keys())):
+        result[ticker] = {
+            'min_date': min_dates.get(ticker),
+            'max_date': max_dates.get(ticker)
+        }
+    
+    return result
 
 def ingest_daily_data():
     # 1. Define your Universe
     tickers = gather_index_tickers()
     
     print("Checking database for existing data...")
-    existing_dates = get_latest_dates_from_db(tickers)
-    print(f"Existing dates fetched: {existing_dates}")
+    date_ranges = get_date_ranges_from_db(tickers)
+    print(f"Found date ranges for {len(date_ranges)} tickers in database")
     
     # 2. Group tickers by "Start Date" to batch requests
-    # (Most stocks will need 'Today', new ones need '1 Year ago')
     today_str = datetime.now().strftime('%Y-%m-%d')
-    one_year_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    two_years_ago = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
     
-    batch_downloads = {} # Format: {'start_date': [list_of_tickers]}
-
+    batch_downloads = {}  # Format: {'start_date': {'end_date': 'YYYY-MM-DD', 'tickers': [...]}}
+    
     for t in tickers:
-        last_date = existing_dates.get(t)
+        ticker_range = date_ranges.get(t)
         
-        if not last_date:
-            # Case A: New Stock -> Download full history
-            start_date = one_year_ago
+        if not ticker_range or not ticker_range.get('max_date'):
+            # Case A: New Stock -> Download full 2-year history
+            start_date = two_years_ago
+            end_date = today_str
         else:
-            # Case B: Existing Stock -> Download only what's missing
-            # Start from the next day
-            last_dt_obj = datetime.strptime(last_date, '%Y-%m-%d')
-            start_date = (last_dt_obj + timedelta(days=1)).strftime('%Y-%m-%d')
+            min_date = ticker_range.get('min_date')
+            max_date = ticker_range.get('max_date')
             
-            # If database is already up to date, skip
-            if start_date > today_str:
-                continue
-
-        if start_date not in batch_downloads:
-            batch_downloads[start_date] = []
-        batch_downloads[start_date].append(t)
+            # Case B: Check for BACKFILL (historical data before earliest date)
+            if min_date and min_date > two_years_ago:
+                backfill_start = two_years_ago
+                # End date for backfill is the day before the earliest existing date
+                min_dt_obj = datetime.strptime(min_date, '%Y-%m-%d')
+                backfill_end = (min_dt_obj - timedelta(days=1)).strftime('%Y-%m-%d')
+                
+                if backfill_start <= backfill_end:
+                    key = f"{backfill_start}_to_{backfill_end}"
+                    if key not in batch_downloads:
+                        batch_downloads[key] = {'start': backfill_start, 'end': backfill_end, 'tickers': []}
+                    batch_downloads[key]['tickers'].append(t)
+            
+            # Case C: Check for FORWARD fill (new data after latest date)
+            if max_date:
+                max_dt_obj = datetime.strptime(max_date, '%Y-%m-%d')
+                forward_start = (max_dt_obj + timedelta(days=1)).strftime('%Y-%m-%d')
+                
+                if forward_start <= today_str:
+                    key = f"{forward_start}_to_{today_str}"
+                    if key not in batch_downloads:
+                        batch_downloads[key] = {'start': forward_start, 'end': today_str, 'tickers': []}
+                    batch_downloads[key]['tickers'].append(t)
+            
+            continue  # Already handled above
+        
+        # For new tickers (Case A)
+        key = f"{start_date}_to_{end_date}"
+        if key not in batch_downloads:
+            batch_downloads[key] = {'start': start_date, 'end': end_date, 'tickers': []}
+        batch_downloads[key]['tickers'].append(t)
 
     # 3. Execution Loop
     if not batch_downloads:
         print("✔️ No new batches to download.")
         return
+    
+    # Summary of what will be downloaded
+    print(f"\n📊 Download plan: {len(batch_downloads)} batch(es)")
+    for batch_key, batch_info in batch_downloads.items():
+        print(f"   • {batch_info['start']} → {batch_info['end']}: {len(batch_info['tickers'])} tickers")
+    print()
 
-    for start_date, batch_tickers in batch_downloads.items():
-        print(f"Fetching data starting {start_date} for {len(batch_tickers)} stocks...")
+    for batch_key, batch_info in batch_downloads.items():
+        start_date = batch_info['start']
+        end_date = batch_info['end']
+        batch_tickers = batch_info['tickers']
+        
+        print(f"📥 Fetching data from {start_date} to {end_date} for {len(batch_tickers)} stocks...")
         
         # yfinance can download multiple tickers at once (Efficient)
         try:
             # auto_adjust=True handles splits/dividends for the NEW data
-            data = yf.download(batch_tickers, start=start_date, group_by='ticker', progress=False, auto_adjust=True)
+            # Note: yfinance 'end' is exclusive, so add 1 day
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+            end_date_yf = end_dt.strftime('%Y-%m-%d')
+            
+            data = yf.download(batch_tickers, start=start_date, end=end_date_yf, group_by='ticker', progress=False, auto_adjust=True)
+            
+            if data.empty:
+                print(f"⚠️ No data returned for batch starting {start_date}")
+                continue
+            
+            # Debug: print column structure
+            print(f"📊 Data columns type: {type(data.columns)}")
+            print(f"📊 Data columns: {list(data.columns)[:10]}...")  # First 10 columns
             
             records_to_insert = []
             
             # 4. Parse and Format for SQL
             # yfinance returns a MultiIndex if multiple tickers, or simple DF if single
-            if len(batch_tickers) == 1:
-                # Handle single ticker case manually to match structure
-                t = batch_tickers[0]
-                for date, row in data.iterrows():
-                    records_to_insert.append(format_row(t, date, row))
-            else:
-                for t in batch_tickers:
-                    df_ticker = data[t].dropna()
-                    for date, row in df_ticker.iterrows():
+            # Flatten MultiIndex columns if present
+            if isinstance(data.columns, pd.MultiIndex):
+                print(f"📊 MultiIndex detected with {data.columns.nlevels} levels")
+                if len(batch_tickers) == 1:
+                    # Single ticker with MultiIndex: columns are (Ticker, Metric)
+                    # We need level 1 (metric names like Open, High, etc.)
+                    data.columns = data.columns.get_level_values(1)
+                    print(f"📊 Flattened columns: {list(data.columns)}")
+                    t = batch_tickers[0]
+                    for date, row in data.dropna().iterrows():
                         records_to_insert.append(format_row(t, date, row))
+                else:
+                    # Multiple tickers with MultiIndex: columns are (Ticker, Metric)
+                    # Use level 0 to get ticker data
+                    for t in batch_tickers:
+                        try:
+                            df_ticker = data.xs(t, level=0, axis=1).dropna()
+                            for date, row in df_ticker.iterrows():
+                                records_to_insert.append(format_row(t, date, row))
+                        except KeyError:
+                            print(f"⚠️ No data for {t}")
+            else:
+                print(f"📊 Simple columns detected")
+                # Simple columns (older yfinance or single ticker without MultiIndex)
+                if len(batch_tickers) == 1:
+                    t = batch_tickers[0]
+                    for date, row in data.dropna().iterrows():
+                        records_to_insert.append(format_row(t, date, row))
+                else:
+                    for t in batch_tickers:
+                        df_ticker = data[t].dropna()
+                        for date, row in df_ticker.iterrows():
+                            records_to_insert.append(format_row(t, date, row))
             
             # 5. Bulk Upsert to Supabase
             if records_to_insert:
@@ -163,7 +254,6 @@ def format_row(ticker, date, row):
         "low": float(row['Low']),
         "close": float(row['Close']),
         "volume": int(row['Volume']),
-        # yfinance 'Close' is already adjusted when auto_adjust=True
         "adjusted_close": float(row['Close']) 
     }
 
