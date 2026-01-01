@@ -19,6 +19,6 @@ seed_supabase.py
 
 .sql
 
-
+ingest_prices.py
 
 

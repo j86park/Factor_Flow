@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from supabase import create_client, Client
 import dotenv
+import yfinance as yf
+from datetime import timedelta
 
 # 1. SETUP
 dotenv.load_dotenv()
@@ -32,10 +34,69 @@ def fetch_all_prices():
     response = supabase.table("stock_prices").select("ticker, date, close").execute()
     
     df = pd.DataFrame(response.data)
-    df['date'] = pd.to_datetime(df['date'])
-    
-    price_matrix = df.pivot(index='date', columns='ticker', values='close')
-    return price_matrix.sort_index()
+    df["date"] = pd.to_datetime(df["date"])
+
+    price_matrix = df.pivot(index="date", columns="ticker", values="close")
+    price_matrix = price_matrix.sort_index()
+    return ensure_spy_history(price_matrix)
+
+
+def filter_full_history_tickers(price_matrix: pd.DataFrame) -> pd.DataFrame:
+    """Keep only tickers that appear on every unique date in the matrix."""
+    required = price_matrix.index.nunique()
+    counts = price_matrix.count()
+    full_history = counts[counts >= required].index
+    if BENCHMARK_TICKER in price_matrix.columns and BENCHMARK_TICKER not in full_history:
+        full_history = full_history.append(pd.Index([BENCHMARK_TICKER]))
+    filtered = price_matrix.loc[:, full_history]
+    print(f"ℹ️ Keeping {len(full_history)} tickers with data on all {required} unique dates")
+    return filtered
+
+
+def ensure_spy_history(price_matrix: pd.DataFrame) -> pd.DataFrame:
+    """Ensure the benchmark ticker is present using Yahoo Finance when needed."""
+    if BENCHMARK_TICKER in price_matrix.columns or price_matrix.empty:
+        return price_matrix
+
+    start = price_matrix.index.min()
+    end = price_matrix.index.max() + timedelta(days=1)
+    start_str = start.strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
+    print(f"📥 Downloading {BENCHMARK_TICKER} from Yahoo Finance ({start_str} to {end_str})...")
+    try:
+        spy_data = yf.download(
+            BENCHMARK_TICKER,
+            start=start_str,
+            end=end_str,
+            progress=False,
+            auto_adjust=False,
+        )
+        if spy_data.empty:
+            print("⚠️ Yahoo Finance returned empty SPY data.")
+            return price_matrix
+
+        # Handle MultiIndex columns that yfinance sometimes returns
+        if isinstance(spy_data.columns, pd.MultiIndex):
+            spy_data.columns = spy_data.columns.get_level_values(0)
+
+        if "Close" not in spy_data.columns:
+            raise ValueError(f"Close column not found. Available: {list(spy_data.columns)}")
+
+        spy_series = spy_data["Close"].squeeze()  # Ensure it's a Series
+        spy_series = spy_series.reindex(price_matrix.index).ffill()
+
+        if spy_series.isna().all():
+            print("⚠️ SPY data is all NaN after reindex.")
+            return price_matrix
+
+        price_matrix[BENCHMARK_TICKER] = spy_series.values
+        print(f"✅ Added {BENCHMARK_TICKER} history from Yahoo Finance ({len(spy_series.dropna())} rows).")
+        return price_matrix
+    except Exception as exc:
+        print(f"⚠️ Failed to download SPY from Yahoo Finance: {exc}")
+        import traceback
+        traceback.print_exc()
+        return price_matrix
 
 def _safe_lookback(series_length: int, lookback: int, label: str) -> bool:
     if series_length <= lookback:
@@ -48,10 +109,16 @@ def calculate_complex_features(price_matrix):
     """
     Computes SOTA metrics: Beta, Residual Volatility, Momentum.
     """
-    features = pd.DataFrame(index=price_matrix.columns)
     if price_matrix.empty:
         print("⚠️ Price matrix is empty. Skipping feature calculation.")
-        return features
+        return pd.DataFrame()
+
+    price_matrix = filter_full_history_tickers(price_matrix.copy())
+    if price_matrix.empty:
+        print("⚠️ No tickers with 252+ observations. Skipping feature calculation.")
+        return pd.DataFrame()
+
+    features = pd.DataFrame(index=price_matrix.columns)
 
     # 1. PREP: Calculate Log Returns (Better for math than % change)
     log_rets = np.log(price_matrix / price_matrix.shift(1))
@@ -79,18 +146,6 @@ def calculate_complex_features(price_matrix):
         print("⚠️ Not enough data for 90-day volatility.")
         features["volatility_90d"] = np.nan
     
-    # 2. MOMENTUM (Simple Rolling Math)
-    print("Calculating Momentum & Volatility...")
-    # 12-Month Return (approx 252 trading days)
-    features['return_12m'] = price_matrix.iloc[-1] / price_matrix.iloc[-252] - 1
-    # 3-Month Return (approx 63 trading days)
-    features['return_3m'] = price_matrix.iloc[-1] / price_matrix.iloc[-63] - 1
-    # 1-Month Return (approx 21 trading days)
-    features['return_1m'] = price_matrix.iloc[-1] / price_matrix.iloc[-21] - 1
-    
-    # Volatility (90-day annualized std dev)
-    features['volatility_90d'] = log_rets.rolling(window=90).std().iloc[-1] * np.sqrt(252)
-
     # 3. REGRESSION METRICS (Beta & Rezzy)
     # We regress every stock against SPY to find "Alpha" and "Idiosyncratic Risk"
     print("Calculating Beta and Residuals (Regression)...")
@@ -104,7 +159,14 @@ def calculate_complex_features(price_matrix):
     betas = []
     residual_vols = []
     
-    # Loop efficiently only for regression (hard to vectorize perfectly)
+    # Loop efficiently only for regression 
+    if len(market_rets) < 200:
+        print("⚠️ Not enough market data for regression. Skipping Beta calculations.")
+        features["beta"] = np.nan
+        features["idiosyncratic_vol"] = np.nan
+        features["upside_beta"] = np.nan
+        return features
+
     for ticker in price_matrix.columns:
         try:
             # Align data: Drop missing days for specific stock
