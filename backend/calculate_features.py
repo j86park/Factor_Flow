@@ -4,7 +4,7 @@ import numpy as np
 from supabase import create_client, Client
 import dotenv
 import yfinance as yf
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 # 1. SETUP
 dotenv.load_dotenv()
@@ -24,32 +24,86 @@ def linear_regression_slope_and_predictions(
     predictions = X @ coeffs
     return coeffs[1], predictions
 
-def fetch_all_prices():
+def fetch_all_prices(lookback_days: int = 400):
     """
-    Downloads the entire price history from Supabase efficiently.
-    Returns a MultiIndex DataFrame (Date, Ticker).
-    """
-    print("Fetching price history from database...")
-    # fetch only necessary columns to save memory
-    response = supabase.table("stock_prices").select("ticker, date, close").execute()
+    Downloads price history from Supabase for the past N days from today.
+    Returns a DataFrame with dates as index and tickers as columns.
     
-    df = pd.DataFrame(response.data)
+    Args:
+        lookback_days: Number of calendar days to look back (default: 400 to ensure 252+ trading days)
+    """
+    today = datetime.now().date()
+    start_date = today - timedelta(days=lookback_days)
+    
+    print(f"Fetching price history from {start_date} to {today}...")
+    
+    # Paginate through all results (Supabase default limit is 1000)
+    all_data = []
+    page_size = 1000  # Supabase max is 1000 per request
+    offset = 0
+    
+    while True:
+        response = (
+            supabase.table("stock_prices")
+            .select("ticker, date, close")
+            .gte("date", start_date.isoformat())
+            .lte("date", today.isoformat())
+            .order("date")
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        
+        if not response.data:
+            break
+            
+        all_data.extend(response.data)
+        
+        if len(response.data) < page_size:
+            print(f"   ... fetched {len(all_data)} rows (final page)")
+            break  # Last page
+        
+        if len(all_data) % 10000 == 0:  # Progress every 10k rows
+            print(f"   ... fetched {len(all_data)} rows so far")
+        
+        offset += page_size
+    
+    if not all_data:
+        print("⚠️ No data found in the specified date range.")
+        return pd.DataFrame()
+    
+    df = pd.DataFrame(all_data)
     df["date"] = pd.to_datetime(df["date"])
+    
+    # Remove duplicate (ticker, date) entries, keeping the last one
+    before_dedup = len(df)
+    df = df.drop_duplicates(subset=["ticker", "date"], keep="last")
+    if len(df) < before_dedup:
+        print(f"⚠️ Removed {before_dedup - len(df)} duplicate entries")
+    
+    print(f"📊 Retrieved {len(df)} price records for {df['ticker'].nunique()} tickers")
 
     price_matrix = df.pivot(index="date", columns="ticker", values="close")
     price_matrix = price_matrix.sort_index()
+    
+    print(f"📅 Date range: {price_matrix.index.min().date()} to {price_matrix.index.max().date()} ({len(price_matrix)} trading days)")
+    
     return ensure_spy_history(price_matrix)
 
 
-def filter_full_history_tickers(price_matrix: pd.DataFrame) -> pd.DataFrame:
-    """Keep only tickers that appear on every unique date in the matrix."""
-    required = price_matrix.index.nunique()
+def filter_full_history_tickers(price_matrix: pd.DataFrame, min_pct: float = 0.95) -> pd.DataFrame:
+    """Keep tickers that have at least min_pct of all trading days (default 95%)."""
+    total_days = price_matrix.index.nunique()
+    min_required = int(total_days * min_pct)
+    
     counts = price_matrix.count()
-    full_history = counts[counts >= required].index
-    if BENCHMARK_TICKER in price_matrix.columns and BENCHMARK_TICKER not in full_history:
-        full_history = full_history.append(pd.Index([BENCHMARK_TICKER]))
-    filtered = price_matrix.loc[:, full_history]
-    print(f"ℹ️ Keeping {len(full_history)} tickers with data on all {required} unique dates")
+    sufficient_history = counts[counts >= min_required].index
+    
+    # Always keep benchmark if present
+    if BENCHMARK_TICKER in price_matrix.columns and BENCHMARK_TICKER not in sufficient_history:
+        sufficient_history = sufficient_history.append(pd.Index([BENCHMARK_TICKER]))
+    
+    filtered = price_matrix.loc[:, sufficient_history]
+    print(f"ℹ️ Keeping {len(sufficient_history)} tickers with >= {min_required}/{total_days} days ({min_pct*100:.0f}%)")
     return filtered
 
 
