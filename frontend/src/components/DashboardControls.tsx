@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { Modal } from './Modal';
+import { FactorSparkline } from './FactorSparkline';
 
 interface Definition {
   term: string;
@@ -9,9 +10,17 @@ interface Definition {
 }
 
 interface Factor {
+  id: number;
   name: string;
   description: string;
   type?: string;
+  perf_1d: number | null;
+  perf_5d: number | null;
+  perf_1m: number | null;
+  perf_3m: number | null;
+  perf_6m: number | null;
+  perf_1y: number | null;
+  num_holdings: number | null;
 }
 
 const TIME_FRAMES = ['1D', '5D', '1M', '3M', '6M', '12M'];
@@ -102,7 +111,7 @@ export function DashboardControls() {
       setFactorsLoading(true);
       setFactorsError(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/factors`);
+        const response = await fetch(`${API_BASE_URL}/api/factors-with-performance`);
         if (!response.ok) {
           throw new Error(`Failed to fetch factors: ${response.statusText}`);
         }
@@ -282,19 +291,41 @@ export function DashboardControls() {
                 );
               }
 
-              return filtered.map((factor, idx) => (
-                <div key={`${factor.name}-${idx}`} className="bg-[#0a0e14]/50 hover:bg-[#0a0e14] transition-colors rounded-xl p-5 border border-gray-800">
-                  <h3 className="text-cyan-400 font-bold text-xl mb-2">
-                    {factor.name}
-                  </h3>
-                  <p className="text-gray-400 text-sm mb-2">
-                    {factor.description}
-                  </p>
-                  {factor.type && (
-                    <span className="text-xs uppercase tracking-wider text-cyan-200 bg-white/5 px-3 py-1 rounded-full inline-flex">
-                      {factor.type}
-                    </span>
-                  )}
+              return filtered.map((factor) => (
+                <div key={factor.id} className="bg-[#0a0e14]/50 hover:bg-[#0a0e14] transition-colors rounded-xl p-5 border border-gray-800">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-cyan-400 font-bold text-xl mb-2">
+                        {factor.name}
+                      </h3>
+                      <p className="text-gray-400 text-sm mb-3">
+                        {factor.description}
+                      </p>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {factor.type && (
+                          <span className="text-xs uppercase tracking-wider text-cyan-200 bg-white/5 px-3 py-1 rounded-full inline-flex">
+                            {factor.type}
+                          </span>
+                        )}
+                        {factor.num_holdings !== null && (
+                          <span className="text-xs text-gray-500">
+                            {factor.num_holdings} holdings
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      <FactorSparkline
+                        perf_1d={factor.perf_1d}
+                        perf_5d={factor.perf_5d}
+                        perf_1m={factor.perf_1m}
+                        perf_3m={factor.perf_3m}
+                        perf_6m={factor.perf_6m}
+                        perf_1y={factor.perf_1y}
+                        selectedTimeframe={selectedTimeFrame}
+                      />
+                    </div>
+                  </div>
                 </div>
               ));
             })()

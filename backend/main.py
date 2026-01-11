@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -57,6 +57,20 @@ class Factor(BaseModel):
     name: str
     description: str
     type: str | None = None
+
+
+class FactorWithPerformance(BaseModel):
+    id: int
+    name: str
+    description: str
+    type: Optional[str] = None
+    perf_1d: Optional[float] = None
+    perf_5d: Optional[float] = None
+    perf_1m: Optional[float] = None
+    perf_3m: Optional[float] = None
+    perf_6m: Optional[float] = None
+    perf_1y: Optional[float] = None
+    num_holdings: Optional[int] = None
 
 
 # Fallback mock data (used if Supabase is not configured)
@@ -143,3 +157,53 @@ def get_factors():
             print(f"Error fetching factors from Supabase: {e}")
             return FACTORS_DATA
     return FACTORS_DATA
+
+
+@app.get("/api/factors-with-performance", response_model=List[FactorWithPerformance])
+def get_factors_with_performance():
+    """Fetch factors joined with their latest performance data from Supabase."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        # Fetch all factors
+        factors_response = supabase.table("factors").select("id, name, description, type").execute()
+        factors = {row["id"]: row for row in factors_response.data}
+        
+        # Fetch latest performance for each factor (ordered by run_date desc)
+        perf_response = supabase.table("factor_performance").select(
+            "factor_id, run_date, perf_1d, perf_5d, perf_1m, perf_3m, perf_6m, perf_1y, num_holdings"
+        ).order("run_date", desc=True).execute()
+        
+        # Build a map of factor_id -> latest performance (first occurrence due to desc order)
+        latest_perf = {}
+        for row in perf_response.data:
+            fid = row["factor_id"]
+            if fid not in latest_perf:
+                latest_perf[fid] = row
+        
+        # Combine factors with their performance data
+        result = []
+        for factor_id, factor in factors.items():
+            perf = latest_perf.get(factor_id, {})
+            result.append({
+                "id": factor_id,
+                "name": factor["name"],
+                "description": factor.get("description") or "",
+                "type": factor.get("type"),
+                "perf_1d": perf.get("perf_1d"),
+                "perf_5d": perf.get("perf_5d"),
+                "perf_1m": perf.get("perf_1m"),
+                "perf_3m": perf.get("perf_3m"),
+                "perf_6m": perf.get("perf_6m"),
+                "perf_1y": perf.get("perf_1y"),
+                "num_holdings": perf.get("num_holdings"),
+            })
+        
+        # Sort by name for consistent ordering
+        result.sort(key=lambda x: x["name"])
+        return result
+        
+    except Exception as e:
+        print(f"Error fetching factors with performance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
