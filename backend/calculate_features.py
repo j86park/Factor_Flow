@@ -68,7 +68,7 @@ def fetch_all_prices(lookback_days: int = 400):
         offset += page_size
     
     if not all_data:
-        print("⚠️ No data found in the specified date range.")
+        print("[WARN] No data found in the specified date range.")
         return pd.DataFrame()
     
     df = pd.DataFrame(all_data)
@@ -78,14 +78,14 @@ def fetch_all_prices(lookback_days: int = 400):
     before_dedup = len(df)
     df = df.drop_duplicates(subset=["ticker", "date"], keep="last")
     if len(df) < before_dedup:
-        print(f"⚠️ Removed {before_dedup - len(df)} duplicate entries")
+        print(f"[WARN] Removed {before_dedup - len(df)} duplicate entries")
     
-    print(f"📊 Retrieved {len(df)} price records for {df['ticker'].nunique()} tickers")
+    print(f"[DATA] Retrieved {len(df)} price records for {df['ticker'].nunique()} tickers")
 
     price_matrix = df.pivot(index="date", columns="ticker", values="close")
     price_matrix = price_matrix.sort_index()
     
-    print(f"📅 Date range: {price_matrix.index.min().date()} to {price_matrix.index.max().date()} ({len(price_matrix)} trading days)")
+    print(f"[DATE] Date range: {price_matrix.index.min().date()} to {price_matrix.index.max().date()} ({len(price_matrix)} trading days)")
     
     return ensure_spy_history(price_matrix)
 
@@ -103,7 +103,7 @@ def filter_full_history_tickers(price_matrix: pd.DataFrame, min_pct: float = 0.9
         sufficient_history = sufficient_history.append(pd.Index([BENCHMARK_TICKER]))
     
     filtered = price_matrix.loc[:, sufficient_history]
-    print(f"ℹ️ Keeping {len(sufficient_history)} tickers with >= {min_required}/{total_days} days ({min_pct*100:.0f}%)")
+    print(f"[INFO] Keeping {len(sufficient_history)} tickers with >= {min_required}/{total_days} days ({min_pct*100:.0f}%)")
     return filtered
 
 
@@ -116,7 +116,7 @@ def ensure_spy_history(price_matrix: pd.DataFrame) -> pd.DataFrame:
     end = price_matrix.index.max() + timedelta(days=1)
     start_str = start.strftime("%Y-%m-%d")
     end_str = end.strftime("%Y-%m-%d")
-    print(f"📥 Downloading {BENCHMARK_TICKER} from Yahoo Finance ({start_str} to {end_str})...")
+    print(f"[DOWNLOAD] Downloading {BENCHMARK_TICKER} from Yahoo Finance ({start_str} to {end_str})...")
     try:
         spy_data = yf.download(
             BENCHMARK_TICKER,
@@ -126,7 +126,7 @@ def ensure_spy_history(price_matrix: pd.DataFrame) -> pd.DataFrame:
             auto_adjust=False,
         )
         if spy_data.empty:
-            print("⚠️ Yahoo Finance returned empty SPY data.")
+            print("[WARN] Yahoo Finance returned empty SPY data.")
             return price_matrix
 
         # Handle MultiIndex columns that yfinance sometimes returns
@@ -140,21 +140,21 @@ def ensure_spy_history(price_matrix: pd.DataFrame) -> pd.DataFrame:
         spy_series = spy_series.reindex(price_matrix.index).ffill()
 
         if spy_series.isna().all():
-            print("⚠️ SPY data is all NaN after reindex.")
+            print("[WARN] SPY data is all NaN after reindex.")
             return price_matrix
 
         price_matrix[BENCHMARK_TICKER] = spy_series.values
-        print(f"✅ Added {BENCHMARK_TICKER} history from Yahoo Finance ({len(spy_series.dropna())} rows).")
+        print(f"[OK] Added {BENCHMARK_TICKER} history from Yahoo Finance ({len(spy_series.dropna())} rows).")
         return price_matrix
     except Exception as exc:
-        print(f"⚠️ Failed to download SPY from Yahoo Finance: {exc}")
+        print(f"[WARN] Failed to download SPY from Yahoo Finance: {exc}")
         import traceback
         traceback.print_exc()
         return price_matrix
 
 def _safe_lookback(series_length: int, lookback: int, label: str) -> bool:
     if series_length <= lookback:
-        print(f"⚠️ Not enough history ({series_length}) for {label} ({lookback} days).")
+        print(f"[WARN] Not enough history ({series_length}) for {label} ({lookback} days).")
         return False
     return True
 
@@ -164,12 +164,12 @@ def calculate_complex_features(price_matrix):
     Computes SOTA metrics: Beta, Residual Volatility, Momentum.
     """
     if price_matrix.empty:
-        print("⚠️ Price matrix is empty. Skipping feature calculation.")
+        print("[WARN] Price matrix is empty. Skipping feature calculation.")
         return pd.DataFrame()
 
     price_matrix = filter_full_history_tickers(price_matrix.copy())
     if price_matrix.empty:
-        print("⚠️ No tickers with 252+ observations. Skipping feature calculation.")
+        print("[WARN] No tickers with 252+ observations. Skipping feature calculation.")
         return pd.DataFrame()
 
     features = pd.DataFrame(index=price_matrix.columns)
@@ -197,7 +197,7 @@ def calculate_complex_features(price_matrix):
     if len(log_rets.dropna(how="all")) >= 90:
         features["volatility_90d"] = log_rets.rolling(window=90).std().iloc[-1] * np.sqrt(252)
     else:
-        print("⚠️ Not enough data for 90-day volatility.")
+        print("[WARN] Not enough data for 90-day volatility.")
         features["volatility_90d"] = np.nan
     
     # 3. REGRESSION METRICS (Beta & Rezzy)
@@ -215,7 +215,7 @@ def calculate_complex_features(price_matrix):
     
     # Loop efficiently only for regression 
     if len(market_rets) < 200:
-        print("⚠️ Not enough market data for regression. Skipping Beta calculations.")
+        print("[WARN] Not enough market data for regression. Skipping Beta calculations.")
         features["beta"] = np.nan
         features["idiosyncratic_vol"] = np.nan
         features["upside_beta"] = np.nan
