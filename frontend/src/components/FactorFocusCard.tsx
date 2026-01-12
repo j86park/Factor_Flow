@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Target } from 'lucide-react';
 import { Modal } from './Modal';
+import { ZScoreModal } from './ZScoreModal';
 
 interface TopFactor {
   id: number;
@@ -56,6 +57,7 @@ export function FactorFocusCard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRotationOpen, setIsRotationOpen] = useState(false);
+  const [selectedFactor, setSelectedFactor] = useState<TopFactor | null>(null);
 
   useEffect(() => {
     const fetchTopFactors = async () => {
@@ -159,11 +161,12 @@ export function FactorFocusCard() {
                 </div>
 
                 {/* Factor Rows */}
-                <div className="space-y-[15px]">
+                <div className="space-y-[12px]">
                   {topFactors.map((factor) => (
                     <div 
                       key={factor.id} 
-                      className="flex items-center py-[15px] hover:bg-[#1a2332]/30 transition-colors rounded-lg"
+                      onClick={() => setSelectedFactor(factor)}
+                      className="flex items-center py-[16px] px-[20px] bg-[#1a2a3d]/40 hover:bg-[#1e3045]/60 transition-colors rounded-2xl border border-[#2a3f5f]/50 cursor-pointer"
                     >
                       <span className="text-white font-medium text-base min-w-[300px]">{factor.name}</span>
                       <div className="flex gap-[18px]">
@@ -193,6 +196,14 @@ export function FactorFocusCard() {
           </p>
         </div>
       </Modal>
+
+      {/* Z-Score Detail Modal */}
+      <ZScoreModal
+        isOpen={selectedFactor !== null}
+        onClose={() => setSelectedFactor(null)}
+        factorId={selectedFactor?.id ?? null}
+        factorName={selectedFactor?.name ?? ''}
+      />
     </div>
   );
 }

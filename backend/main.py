@@ -96,6 +96,27 @@ class ThemeTitleResponse(BaseModel):
     title: str
 
 
+class ZScoreDataPoint(BaseModel):
+    date: str
+    zscore: float
+    factor_value: Optional[float] = None
+
+
+class ZScoreStats(BaseModel):
+    current_zscore: Optional[float] = None
+    avg_zscore: Optional[float] = None
+    max_zscore: Optional[float] = None
+    min_zscore: Optional[float] = None
+    current_value: Optional[float] = None
+
+
+class FactorZScoreResponse(BaseModel):
+    factor_id: int
+    factor_name: str
+    stats: ZScoreStats
+    history: List[ZScoreDataPoint]
+
+
 # Fallback mock data (used if Supabase is not configured)
 FALLBACK_DEFINITIONS_DATA = [
     {
@@ -357,3 +378,75 @@ Examples of good titles: "AI & Tech", "Value Plays", "Growth Momentum", "Defensi
     except Exception as e:
         print(f"Error generating theme title: {e}")
         return {"title": "Top Performers"}
+
+
+@app.get("/api/factor-zscore/{factor_id}", response_model=FactorZScoreResponse)
+def get_factor_zscore(factor_id: int):
+    """Fetch Z-score history and stats for a specific factor."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        # Fetch factor name
+        factor_response = supabase.table("factors").select("name").eq("id", factor_id).execute()
+        if not factor_response.data:
+            raise HTTPException(status_code=404, detail="Factor not found")
+        
+        factor_name = factor_response.data[0]["name"]
+        
+        # Fetch Z-score history (last 252 trading days)
+        zscore_response = supabase.table("factor_zscore_history").select(
+            "date, zscore, factor_value"
+        ).eq("factor_id", factor_id).order("date", desc=False).limit(300).execute()
+        
+        if not zscore_response.data:
+            # Return empty response if no Z-score data
+            return {
+                "factor_id": factor_id,
+                "factor_name": factor_name,
+                "stats": {
+                    "current_zscore": None,
+                    "avg_zscore": None,
+                    "max_zscore": None,
+                    "min_zscore": None,
+                    "current_value": None,
+                },
+                "history": [],
+            }
+        
+        history = zscore_response.data
+        
+        # Calculate stats
+        zscores = [h["zscore"] for h in history if h["zscore"] is not None]
+        
+        current_zscore = history[-1]["zscore"] if history else None
+        current_value = history[-1]["factor_value"] if history else None
+        avg_zscore = sum(zscores) / len(zscores) if zscores else None
+        max_zscore = max(zscores) if zscores else None
+        min_zscore = min(zscores) if zscores else None
+        
+        return {
+            "factor_id": factor_id,
+            "factor_name": factor_name,
+            "stats": {
+                "current_zscore": current_zscore,
+                "avg_zscore": avg_zscore,
+                "max_zscore": max_zscore,
+                "min_zscore": min_zscore,
+                "current_value": current_value,
+            },
+            "history": [
+                {
+                    "date": h["date"],
+                    "zscore": h["zscore"],
+                    "factor_value": h["factor_value"],
+                }
+                for h in history
+            ],
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching factor Z-score: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -309,7 +309,7 @@ export function DashboardControls() {
                         )}
                         {factor.num_holdings !== null && (
                           <span className="text-xs text-gray-500">
-                            {factor.num_holdings} holdings
+                            ({factor.num_holdings} holdings)
                           </span>
                         )}
                       </div>
