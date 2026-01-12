@@ -450,3 +450,133 @@ def get_factor_zscore(factor_id: int):
     except Exception as e:
         print(f"Error fetching factor Z-score: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Daily market analysis cache (keyed by date string)
+_market_analysis_cache: dict[str, dict] = {}
+
+
+class FactorTag(BaseModel):
+    name: str
+    perf_1d: Optional[float] = None
+
+
+class MarketAnalysisResponse(BaseModel):
+    date: str
+    analysis: str
+    top_factors: List[FactorTag]
+    bottom_factors: List[FactorTag]
+
+
+@app.get("/api/market-analysis", response_model=MarketAnalysisResponse)
+async def get_market_analysis():
+    """Generate daily market rotation analysis using LLM based on top/bottom factors."""
+    from datetime import date
+    
+    today = date.today().isoformat()
+    
+    # Check cache first
+    if today in _market_analysis_cache:
+        return _market_analysis_cache[today]
+    
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        # Fetch all factors with performance
+        factors_response = supabase.table("factors").select("id, name").execute()
+        factors = {row["id"]: row["name"] for row in factors_response.data}
+        
+        # Fetch latest performance
+        perf_response = supabase.table("factor_performance").select(
+            "factor_id, run_date, perf_1d, perf_5d, perf_1m"
+        ).order("run_date", desc=True).execute()
+        
+        # Build map of factor_id -> latest performance
+        latest_perf = {}
+        for row in perf_response.data:
+            fid = row["factor_id"]
+            if fid not in latest_perf:
+                latest_perf[fid] = row
+        
+        # Combine and sort
+        factor_data = []
+        for factor_id, name in factors.items():
+            perf = latest_perf.get(factor_id, {})
+            perf_1d = perf.get("perf_1d")
+            if perf_1d is not None:
+                factor_data.append({"name": name, "perf_1d": perf_1d})
+        
+        # Sort by 1D performance
+        factor_data.sort(key=lambda x: x["perf_1d"] if x["perf_1d"] is not None else float('-inf'), reverse=True)
+        
+        top_5 = factor_data[:5]
+        bottom_5 = factor_data[-5:][::-1]  # Worst first
+        
+        # Build prompt for LLM
+        top_factors_str = ", ".join([f"{f['name']} ({f['perf_1d']*100:+.2f}%)" for f in top_5])
+        bottom_factors_str = ", ".join([f"{f['name']} ({f['perf_1d']*100:+.2f}%)" for f in bottom_5])
+        
+        prompt = f"""You are a professional market analyst. Given the following factor performance data for today ({today}), provide a concise market rotation analysis.
+
+**Top 5 Performing Factors (1D):**
+{top_factors_str}
+
+**Bottom 5 Performing Factors (1D):**
+{bottom_factors_str}
+
+Analyze what this factor rotation tells us about:
+1. Current market sentiment (risk-on vs risk-off)
+2. Sector/theme leadership shifts
+3. Key themes to watch
+
+Write 2-3 paragraphs in a professional but accessible tone. End with 2-3 specific questions for investors to consider. Do not use bullet points in your main analysis."""
+
+        # Default analysis if no API key
+        analysis = "Market analysis unavailable. Please configure OPENROUTER_API_KEY."
+        
+        if OPENROUTER_API_KEY:
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": "anthropic/claude-3.5-sonnet",
+                            "messages": [
+                                {"role": "user", "content": prompt}
+                            ],
+                            "max_tokens": 800,
+                            "temperature": 0.7,
+                        },
+                        timeout=30.0,
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        analysis = data["choices"][0]["message"]["content"].strip()
+                    else:
+                        print(f"OpenRouter API error: {response.status_code} - {response.text}")
+            except Exception as e:
+                print(f"Error calling OpenRouter: {e}")
+        
+        result = {
+            "date": today,
+            "analysis": analysis,
+            "top_factors": [{"name": f["name"], "perf_1d": f["perf_1d"]} for f in top_5],
+            "bottom_factors": [{"name": f["name"], "perf_1d": f["perf_1d"]} for f in bottom_5],
+        }
+        
+        # Cache the result
+        _market_analysis_cache[today] = result
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating market analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

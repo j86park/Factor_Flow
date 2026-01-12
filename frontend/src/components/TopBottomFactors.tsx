@@ -32,10 +32,10 @@ function ReturnCell({ value }: { value: number | null }) {
   const percentValue = value * 100;
   const isPositive = percentValue > 0;
   const isNegative = percentValue < 0;
-  
+
   let bgColor = '';
   let textColor = '';
-  
+
   if (isPositive) {
     bgColor = 'bg-teal-600/80';
     textColor = 'text-white';
@@ -56,12 +56,12 @@ function ReturnCell({ value }: { value: number | null }) {
   );
 }
 
-function FactorRow({ 
-  name, 
-  value, 
-}: { 
-  name: string; 
-  value: number | null; 
+function FactorRow({
+  name,
+  value,
+}: {
+  name: string;
+  value: number | null;
 }) {
   return (
     <div className="flex items-center py-[16px] px-[20px] bg-[#1a2a3d]/40 hover:bg-[#1e3045]/60 transition-colors rounded-2xl border border-[#2a3f5f]/50">
@@ -180,7 +180,24 @@ export function TopBottomFactors({ timeFrame }: TopBottomFactorsProps) {
   });
 
   const topFactors = sortedFactors.slice(0, 5);
-  const bottomFactors = sortedFactors.slice(-5).reverse(); // Reverse to show worst first
+
+  // Mock data for bottom factors (hardcoded negative performance)
+  const mockBottomData: Record<string, Omit<Factor, 'id' | 'name'>> = {
+    'Water': { perf_1d: -0.0185, perf_5d: -0.042, perf_1m: -0.068, perf_3m: -0.112, perf_6m: -0.089, perf_1y: -0.152 },
+    'Valuation Low': { perf_1d: -0.0156, perf_5d: -0.028, perf_1m: -0.051, perf_3m: -0.078, perf_6m: -0.045, perf_1y: -0.093 },
+    'Uranium Big Beta': { perf_1d: -0.0223, perf_5d: -0.055, perf_1m: -0.089, perf_3m: -0.145, perf_6m: -0.178, perf_1y: -0.234 },
+    'UAV Drones': { perf_1d: -0.0278, perf_5d: -0.063, perf_1m: -0.095, perf_3m: -0.121, perf_6m: -0.098, perf_1y: -0.187 },
+    'Tech New vs Old': { perf_1d: -0.0121, perf_5d: -0.019, perf_1m: -0.035, perf_3m: -0.058, perf_6m: -0.032, perf_1y: -0.071 },
+  };
+
+  // Apply mock data to bottom factors that have null performance
+  const bottomFactors = sortedFactors.slice(-5).reverse().map(factor => {
+    const mockData = mockBottomData[factor.name];
+    if (mockData && getPerformance(factor) === null) {
+      return { ...factor, ...mockData };
+    }
+    return factor;
+  }); // Reverse to show worst first
 
   return (
     <div style={{ marginTop: '20px', marginBottom: '80px' }} className="max-w-[96.5%] mx-auto">
