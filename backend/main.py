@@ -10,6 +10,7 @@ from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv()
+print(f"DEBUG: Loading env vars. URL present: {bool(os.getenv('SUPABASE_URL'))}, Key present: {bool(os.getenv('SUPABASE_SERVICE_ROLE_KEY'))}")
 
 app = FastAPI()
 
