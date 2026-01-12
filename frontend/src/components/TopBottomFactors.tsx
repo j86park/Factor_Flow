@@ -20,38 +20,53 @@ interface TopBottomFactorsProps {
 
 const API_BASE_URL = 'http://localhost:8000';
 
-function formatPercent(value: number | null): string {
-  if (value === null || value === undefined) return '--';
-  const percent = value * 100;
-  const sign = percent >= 0 ? '+' : '';
-  return `${sign}${percent.toFixed(2)}%`;
+function ReturnCell({ value }: { value: number | null }) {
+  if (value === null || value === undefined) {
+    return (
+      <div className="px-3 py-1.5 rounded-md bg-gray-800/30 text-gray-500 text-xs font-semibold text-center w-[120px]">
+        --
+      </div>
+    );
+  }
+
+  const percentValue = value * 100;
+  const isPositive = percentValue > 0;
+  const isNegative = percentValue < 0;
+  
+  let bgColor = '';
+  let textColor = '';
+  
+  if (isPositive) {
+    bgColor = 'bg-teal-600/80';
+    textColor = 'text-white';
+  } else if (isNegative) {
+    bgColor = 'bg-orange-600/80';
+    textColor = 'text-white';
+  } else {
+    bgColor = 'bg-gray-700/50';
+    textColor = 'text-gray-300';
+  }
+
+  const formatted = `${isPositive ? '+' : ''}${percentValue.toFixed(2)}%`;
+
+  return (
+    <div className={`px-3 py-1.5 rounded-md ${bgColor} ${textColor} text-xs font-semibold text-center w-[120px]`}>
+      {formatted}
+    </div>
+  );
 }
 
 function FactorRow({ 
-  rank, 
   name, 
   value, 
-  isTop 
 }: { 
-  rank: number; 
   name: string; 
   value: number | null; 
-  isTop: boolean;
 }) {
-  const textColor = isTop ? 'text-teal-400' : 'text-orange-400';
-  const rankBg = isTop ? 'bg-teal-500/30 text-teal-300' : 'bg-orange-500/30 text-orange-300';
-
   return (
-    <div className="flex items-center justify-between py-4 px-4 hover:bg-white/5 transition-colors rounded-lg">
-      <div className="flex items-center gap-4">
-        <span className={`w-8 h-8 rounded-full ${rankBg} flex items-center justify-center text-sm font-bold`}>
-          {rank}
-        </span>
-        <span className="text-white font-medium">{name}</span>
-      </div>
-      <span className={`${textColor} font-bold text-lg`}>
-        {formatPercent(value)}
-      </span>
+    <div className="flex items-center py-[16px] px-[20px] bg-[#1a2a3d]/40 hover:bg-[#1e3045]/60 transition-colors rounded-2xl border border-[#2a3f5f]/50">
+      <span className="text-white font-medium text-base min-w-[300px]">{name}</span>
+      <ReturnCell value={value} />
     </div>
   );
 }
@@ -62,14 +77,12 @@ function FactorPanel({
   icon,
   factors,
   timeFrame,
-  isTop,
 }: {
   title: string;
   subtitle: string;
   icon: React.ReactNode;
   factors: Factor[];
   timeFrame: TimeFrame;
-  isTop: boolean;
 }) {
   const getPerformance = (factor: Factor): number | null => {
     switch (timeFrame) {
@@ -86,28 +99,35 @@ function FactorPanel({
   return (
     <div className="flex-1 bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-8 border border-[#0a0d11] shadow-2xl min-h-[400px]">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        {icon}
-        <div>
-          <h3 className="text-xl font-bold text-white">{title}</h3>
-          <p className="text-gray-500 text-sm">{subtitle}</p>
+      <div className="mb-8">
+        <div className="flex items-center gap-3">
+          <h3 className="text-[1.625rem] font-bold text-white leading-none">{title}</h3>
+          {icon}
         </div>
+        <p className="text-gray-500 text-sm -mt-1">{subtitle}</p>
       </div>
 
-      {/* Factor List */}
-      <div className="space-y-2">
-        {factors.map((factor, index) => (
-          <FactorRow
-            key={factor.id}
-            rank={index + 1}
-            name={factor.name}
-            value={getPerformance(factor)}
-            isTop={isTop}
-          />
-        ))}
-        {factors.length === 0 && (
-          <p className="text-gray-500 text-center py-8">No data available</p>
-        )}
+      {/* Inner Container with darker background */}
+      <div className="bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[2rem] p-6">
+        {/* Table Header */}
+        <div className="flex items-center mb-[20px] px-[20px]">
+          <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider min-w-[300px]">Factor</span>
+          <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">{timeFrame}</span>
+        </div>
+
+        {/* Factor List */}
+        <div className="space-y-[12px]">
+          {factors.map((factor) => (
+            <FactorRow
+              key={factor.id}
+              name={factor.name}
+              value={getPerformance(factor)}
+            />
+          ))}
+          {factors.length === 0 && (
+            <p className="text-gray-500 text-center py-8">No data available</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -163,7 +183,7 @@ export function TopBottomFactors({ timeFrame }: TopBottomFactorsProps) {
   const bottomFactors = sortedFactors.slice(-5).reverse(); // Reverse to show worst first
 
   return (
-    <div style={{ marginTop: '20px' }} className="max-w-[96.5%] mx-auto">
+    <div style={{ marginTop: '20px', marginBottom: '80px' }} className="max-w-[96.5%] mx-auto">
       {/* Loading State */}
       {loading && (
         <div className="text-center py-12">
@@ -180,23 +200,23 @@ export function TopBottomFactors({ timeFrame }: TopBottomFactorsProps) {
 
       {/* Panels */}
       {!loading && !error && (
-        <div className="flex gap-6">
-          <FactorPanel
-            title="Top Factors"
-            subtitle="Strongest momentum"
-            icon={<Flame className="w-8 h-8 text-orange-400" />}
-            factors={topFactors}
-            timeFrame={timeFrame as TimeFrame}
-            isTop={true}
-          />
-          <FactorPanel
-            title="Bottom Factors"
-            subtitle="Under pressure"
-            icon={<TrendingDown className="w-8 h-8 text-red-400" />}
-            factors={bottomFactors}
-            timeFrame={timeFrame as TimeFrame}
-            isTop={false}
-          />
+        <div className="bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-6 border border-[#0a0d11] shadow-2xl">
+          <div className="flex gap-6">
+            <FactorPanel
+              title="Top Factors"
+              subtitle="Strongest momentum"
+              icon={<Flame className="w-8 h-8 text-orange-400" />}
+              factors={topFactors}
+              timeFrame={timeFrame as TimeFrame}
+            />
+            <FactorPanel
+              title="Bottom Factors"
+              subtitle="Under pressure"
+              icon={<TrendingDown className="w-8 h-8 text-red-400" />}
+              factors={bottomFactors}
+              timeFrame={timeFrame as TimeFrame}
+            />
+          </div>
         </div>
       )}
     </div>
