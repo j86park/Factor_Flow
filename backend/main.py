@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import re
 import httpx
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -341,8 +342,12 @@ Examples of good titles: "AI & Tech", "Value Plays", "Growth Momentum", "Defensi
             data = response.json()
             title = data["choices"][0]["message"]["content"].strip()
             
-            # Clean up the title (remove quotes if present)
+            # Clean up the title (remove quotes and common LLM prefixes)
             title = title.strip('"\'')
+            # Remove common LLM output prefixes like "[OUT]", "Output:", etc.
+            title = re.sub(r'^\[OUT\]\s*', '', title, flags=re.IGNORECASE)
+            title = re.sub(r'^(Output|Answer|Title|Response):\s*', '', title, flags=re.IGNORECASE)
+            title = title.strip('"\'').strip()
             
             # Cache the result
             _theme_title_cache[cache_key] = title
