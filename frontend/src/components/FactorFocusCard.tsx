@@ -1,37 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Target } from 'lucide-react';
 import { Modal } from './Modal';
 
-interface FactorData {
+interface TopFactor {
+  id: number;
   name: string;
-  returns: {
-    '1D': number | null;
-    '5D': number | null;
-    '1M': number | null;
-  };
+  description: string;
+  perf_1d: number | null;
+  perf_5d: number | null;
+  perf_1m: number | null;
 }
 
-interface CategoryData {
-  category: string;
-  factors: FactorData[];
-}
-
-// Placeholder data structure - factors will be empty until populated
-const EMPTY_CATEGORIES: CategoryData[] = [
-  {
-    category: 'AI & Momentum',
-    factors: [
-      { name: 'OAI Ecosystem', returns: { '1D': null, '5D': null, '1M': null } },
-      { name: 'Team TPU', returns: { '1D': null, '5D': null, '1M': null } },
-      { name: 'AI Private Credit', returns: { '1D': null, '5D': null, '1M': null } },
-      { name: 'Momentum Long', returns: { '1D': null, '5D': null, '1M': null } },
-      { name: 'Momentum Short', returns: { '1D': null, '5D': null, '1M': null } },
-    ]
-  }
-];
+const API_BASE_URL = 'http://localhost:8000';
 
 function ReturnCell({ value }: { value: number | null }) {
-  if (value === null) {
+  if (value === null || value === undefined) {
     return (
       <div className="px-3 py-1.5 rounded-md bg-gray-800/30 text-gray-500 text-xs font-semibold text-center w-full">
         --
@@ -39,8 +22,10 @@ function ReturnCell({ value }: { value: number | null }) {
     );
   }
 
-  const isPositive = value > 0;
-  const isNegative = value < 0;
+  // Convert from decimal to percentage (0.05 -> 5%)
+  const percentValue = value * 100;
+  const isPositive = percentValue > 0;
+  const isNegative = percentValue < 0;
   
   let bgColor = '';
   let textColor = '';
@@ -56,7 +41,7 @@ function ReturnCell({ value }: { value: number | null }) {
     textColor = 'text-gray-300';
   }
 
-  const formatted = `${isPositive ? '+' : ''}${value.toFixed(2)}%`;
+  const formatted = `${isPositive ? '+' : ''}${percentValue.toFixed(2)}%`;
 
   return (
     <div className={`px-3 py-1.5 rounded-md ${bgColor} ${textColor} text-xs font-semibold text-center w-full`}>
@@ -66,8 +51,54 @@ function ReturnCell({ value }: { value: number | null }) {
 }
 
 export function FactorFocusCard() {
-  const [categories] = useState<CategoryData[]>(EMPTY_CATEGORIES);
+  const [topFactors, setTopFactors] = useState<TopFactor[]>([]);
+  const [themeTitle, setThemeTitle] = useState<string>('Top Performers');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isRotationOpen, setIsRotationOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchTopFactors = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch top 5 factors by weekly performance
+        const response = await fetch(`${API_BASE_URL}/api/top-factors?limit=5`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch top factors: ${response.statusText}`);
+        }
+        const factors: TopFactor[] = await response.json();
+        setTopFactors(factors);
+        
+        // If we have factors, generate a theme title
+        if (factors.length > 0) {
+          const factorNames = factors.map(f => f.name);
+          try {
+            const titleResponse = await fetch(`${API_BASE_URL}/api/generate-theme-title`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ factor_names: factorNames }),
+            });
+            if (titleResponse.ok) {
+              const titleData = await titleResponse.json();
+              setThemeTitle(titleData.title);
+            }
+          } catch (titleError) {
+            console.error('Error generating theme title:', titleError);
+            // Keep default title on error
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching top factors:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load factors');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTopFactors();
+  }, []);
 
   return (
     <div style={{ marginTop: '20px' }} className="max-w-[96.5%] mx-auto bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-8 shadow-2xl border border-[#0a0d11]">
@@ -90,45 +121,64 @@ export function FactorFocusCard() {
         </button>
       </div>
 
-        <div className="flex justify-center">
-          <div className="w-auto">
-            {categories.map((category, catIdx) => (
-              <div key={catIdx} className="mb-8 bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[4rem] p-[60px]">
-                <div className="px-[30px]">
-                  {/* Category Title */}
-                  <h3 className="text-2xl font-bold text-indigo-400 mb-[30px]">{category.category}</h3>
-                  
-                  {/* Table Header */}
-                  <div className="flex items-center mb-[20px]">
-                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider min-w-[300px]">Factor</span>
-                    <div className="flex gap-[18px]">
-                      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1D</span>
-                      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">5D</span>
-                      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1M</span>
-                    </div>
-                  </div>
-
-                  {/* Factor Rows */}
-                  <div className="space-y-[15px]">
-                    {category.factors.map((factor, idx) => (
-                      <div 
-                        key={idx} 
-                        className="flex items-center py-[15px] hover:bg-[#1a2332]/30 transition-colors rounded-lg"
-                      >
-                        <span className="text-white font-medium text-base min-w-[300px]">{factor.name}</span>
-                        <div className="flex gap-[18px]">
-                          <div className="w-[120px]"><ReturnCell value={factor.returns['1D']} /></div>
-                          <div className="w-[120px]"><ReturnCell value={factor.returns['5D']} /></div>
-                          <div className="w-[120px]"><ReturnCell value={factor.returns['1M']} /></div>
-                        </div>
-                      </div>
-                    ))}
+      <div className="flex justify-center">
+        <div className="w-auto">
+          {isLoading && (
+            <div className="text-center py-12">
+              <p className="text-gray-400">Loading top factors...</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4 mb-4">
+              <p className="text-red-400 text-center">Error: {error}</p>
+            </div>
+          )}
+          
+          {!isLoading && !error && topFactors.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No performance data available yet.</p>
+              <p className="text-gray-600 text-sm mt-2">Run the performance calculation script to populate data.</p>
+            </div>
+          )}
+          
+          {!isLoading && !error && topFactors.length > 0 && (
+            <div className="mb-8 bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[4rem] p-[60px]">
+              <div className="px-[30px]">
+                {/* Category Title - Dynamic from LLM */}
+                <h3 className="text-2xl font-bold text-indigo-400 mb-[30px]">{themeTitle}</h3>
+                
+                {/* Table Header */}
+                <div className="flex items-center mb-[20px]">
+                  <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider min-w-[300px]">Factor</span>
+                  <div className="flex gap-[18px]">
+                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1D</span>
+                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">5D</span>
+                    <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider text-center w-[120px]">1M</span>
                   </div>
                 </div>
+
+                {/* Factor Rows */}
+                <div className="space-y-[15px]">
+                  {topFactors.map((factor) => (
+                    <div 
+                      key={factor.id} 
+                      className="flex items-center py-[15px] hover:bg-[#1a2332]/30 transition-colors rounded-lg"
+                    >
+                      <span className="text-white font-medium text-base min-w-[300px]">{factor.name}</span>
+                      <div className="flex gap-[18px]">
+                        <div className="w-[120px]"><ReturnCell value={factor.perf_1d} /></div>
+                        <div className="w-[120px]"><ReturnCell value={factor.perf_5d} /></div>
+                        <div className="w-[120px]"><ReturnCell value={factor.perf_1m} /></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
+      </div>
 
       {/* Factor Rotation Modal */}
       <Modal
@@ -146,4 +196,3 @@ export function FactorFocusCard() {
     </div>
   );
 }
-

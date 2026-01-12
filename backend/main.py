@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import httpx
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -32,6 +33,10 @@ app.add_middleware(
 # The anon key lacks write permissions and will cause permission errors
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+# Simple in-memory cache for theme titles
+_theme_title_cache: dict[str, str] = {}
 
 supabase: Client | None = None
 if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
@@ -71,6 +76,23 @@ class FactorWithPerformance(BaseModel):
     perf_6m: Optional[float] = None
     perf_1y: Optional[float] = None
     num_holdings: Optional[int] = None
+
+
+class TopFactor(BaseModel):
+    id: int
+    name: str
+    description: str
+    perf_1d: Optional[float] = None
+    perf_5d: Optional[float] = None
+    perf_1m: Optional[float] = None
+
+
+class ThemeTitleRequest(BaseModel):
+    factor_names: List[str]
+
+
+class ThemeTitleResponse(BaseModel):
+    title: str
 
 
 # Fallback mock data (used if Supabase is not configured)
@@ -207,3 +229,126 @@ def get_factors_with_performance():
     except Exception as e:
         print(f"Error fetching factors with performance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/top-factors", response_model=List[TopFactor])
+def get_top_factors(limit: int = 5):
+    """Fetch top N factors by weekly (5D) performance from the latest run_date."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        # First, find the latest run_date in factor_performance
+        latest_date_response = supabase.table("factor_performance").select(
+            "run_date"
+        ).order("run_date", desc=True).limit(1).execute()
+        
+        if not latest_date_response.data:
+            return []
+        
+        latest_run_date = latest_date_response.data[0]["run_date"]
+        
+        # Fetch performance data for the latest run_date, sorted by perf_5d descending
+        perf_response = supabase.table("factor_performance").select(
+            "factor_id, perf_1d, perf_5d, perf_1m"
+        ).eq("run_date", latest_run_date).order("perf_5d", desc=True).limit(limit).execute()
+        
+        if not perf_response.data:
+            return []
+        
+        # Get the factor IDs
+        factor_ids = [row["factor_id"] for row in perf_response.data]
+        
+        # Fetch factor details
+        factors_response = supabase.table("factors").select(
+            "id, name, description"
+        ).in_("id", factor_ids).execute()
+        
+        factors_map = {row["id"]: row for row in factors_response.data}
+        
+        # Combine and maintain the performance-sorted order
+        result = []
+        for perf_row in perf_response.data:
+            factor_id = perf_row["factor_id"]
+            factor = factors_map.get(factor_id, {})
+            if factor:
+                result.append({
+                    "id": factor_id,
+                    "name": factor.get("name", "Unknown"),
+                    "description": factor.get("description", ""),
+                    "perf_1d": perf_row.get("perf_1d"),
+                    "perf_5d": perf_row.get("perf_5d"),
+                    "perf_1m": perf_row.get("perf_1m"),
+                })
+        
+        return result
+        
+    except Exception as e:
+        print(f"Error fetching top factors: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/generate-theme-title", response_model=ThemeTitleResponse)
+async def generate_theme_title(request: ThemeTitleRequest):
+    """Generate a 2-4 word theme title for a list of factor names using OpenRouter LLM."""
+    if not request.factor_names:
+        return {"title": "Top Factors"}
+    
+    # Create a cache key from sorted factor names
+    cache_key = "|".join(sorted(request.factor_names))
+    
+    # Check cache first
+    if cache_key in _theme_title_cache:
+        return {"title": _theme_title_cache[cache_key]}
+    
+    # If no API key, return a generic title
+    if not OPENROUTER_API_KEY:
+        print("Warning: OPENROUTER_API_KEY not set. Using fallback title.")
+        return {"title": "Top Performers"}
+    
+    try:
+        factors_list = ", ".join(request.factor_names)
+        prompt = f"""Given these investment factor names: {factors_list}
+
+Generate a short, catchy 2-4 word title that captures the common theme or category these factors belong to. 
+Just respond with the title, nothing else. No quotes, no explanation.
+
+Examples of good titles: "AI & Tech", "Value Plays", "Growth Momentum", "Defensive Assets", "Energy & Materials"
+"""
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "mistralai/mistral-7b-instruct",
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ],
+                    "max_tokens": 20,
+                    "temperature": 0.7,
+                },
+                timeout=10.0,
+            )
+            
+            if response.status_code != 200:
+                print(f"OpenRouter API error: {response.status_code} - {response.text}")
+                return {"title": "Top Performers"}
+            
+            data = response.json()
+            title = data["choices"][0]["message"]["content"].strip()
+            
+            # Clean up the title (remove quotes if present)
+            title = title.strip('"\'')
+            
+            # Cache the result
+            _theme_title_cache[cache_key] = title
+            
+            return {"title": title}
+            
+    except Exception as e:
+        print(f"Error generating theme title: {e}")
+        return {"title": "Top Performers"}
