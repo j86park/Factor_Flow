@@ -97,18 +97,18 @@ function FactorPanel({
   };
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-8 border border-[#0a0d11] shadow-2xl min-h-[400px]">
+    <div className="flex-1 bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[1.6rem] p-6 border border-[#0a0d11] shadow-2xl min-h-[320px]">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center gap-3">
           <h3 className="text-[1.625rem] font-bold text-white leading-none">{title}</h3>
           {icon}
         </div>
-        <p className="text-gray-500 text-sm -mt-1">{subtitle}</p>
+        <p className="text-gray-500 text-sm -mt-1 text-center">{subtitle}</p>
       </div>
 
       {/* Inner Container with darker background */}
-      <div className="bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[2rem] p-6">
+      <div className="bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[1.6rem] p-6 pb-10">
         {/* Table Header */}
         <div className="flex items-center mb-[20px] px-[20px]">
           <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider min-w-[300px]">Factor</span>
@@ -201,7 +201,7 @@ export function TopBottomFactors({ timeFrame }: TopBottomFactorsProps) {
       {/* Panels */}
       {!loading && !error && (
         <div className="bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-6 border border-[#0a0d11] shadow-2xl">
-          <div className="flex gap-6">
+          <div className="flex gap-8">
             <FactorPanel
               title="Top Factors"
               subtitle="Strongest momentum"
