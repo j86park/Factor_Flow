@@ -28,8 +28,12 @@ const TIME_FRAMES = ['1D', '5D', '1M', '3M', '6M', '12M'];
 // API endpoint - adjust if your backend runs on a different port
 const API_BASE_URL = 'http://localhost:8000';
 
-export function DashboardControls() {
-  const [selectedTimeFrame, setSelectedTimeFrame] = useState('1D');
+interface DashboardControlsProps {
+  selectedTimeFrame: string;
+  onTimeFrameChange: (tf: string) => void;
+}
+
+export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: DashboardControlsProps) {
   const [isDefinitionsOpen, setIsDefinitionsOpen] = useState(false);
   const [isFactorsOpen, setIsFactorsOpen] = useState(false);
   
@@ -184,7 +188,7 @@ export function DashboardControls() {
             {TIME_FRAMES.map((tf) => (
               <button
                 key={tf}
-                onClick={() => setSelectedTimeFrame(tf)}
+                onClick={() => onTimeFrameChange(tf)}
                 style={
                   selectedTimeFrame === tf 
                     ? { backgroundColor: '#22d3ee', color: '#000000', width: '54px', height: '35px' } 
