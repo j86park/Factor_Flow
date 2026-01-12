@@ -196,7 +196,7 @@ export function ZScoreModal({ isOpen, onClose, factorId, factorName }: ZScoreMod
                           color: '#f1f5f9',
                         }}
                         labelStyle={{ color: '#94a3b8' }}
-                        formatter={(value: number) => [value.toFixed(3), 'Z-Score']}
+                        formatter={(value) => [typeof value === 'number' ? value.toFixed(3) : '-', 'Z-Score']}
                       />
                       {/* Reference lines at +2 and -2 sigma */}
                       <ReferenceLine

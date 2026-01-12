@@ -23,7 +23,7 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-ROLLING_WINDOW = 252  # Trading days in a year
+ROLLING_WINDOW = 252  
 
 
 def fetch_factor_performance_history():
