@@ -68,6 +68,9 @@ function StatCard({ label, value, isPercent = false }: { label: string; value: n
 }
 
 export function ZScoreModal({ isOpen, onClose, factorId, factorName }: ZScoreModalProps) {
+  // DEBUG
+  console.log('ZScoreModal component - isOpen:', isOpen, 'factorId:', factorId);
+  
   const [data, setData] = useState<ZScoreData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +109,12 @@ export function ZScoreModal({ isOpen, onClose, factorId, factorName }: ZScoreMod
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('ZScoreModal: returning null because isOpen is false');
+    return null;
+  }
+  
+  console.log('ZScoreModal: RENDERING MODAL - isOpen is true');
 
   // Format chart data with shortened date labels
   const chartData = data?.history.map((point) => ({
@@ -116,7 +124,8 @@ export function ZScoreModal({ isOpen, onClose, factorId, factorName }: ZScoreMod
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}
       onClick={onClose}
     >
       <div

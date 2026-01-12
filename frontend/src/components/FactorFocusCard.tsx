@@ -102,6 +102,10 @@ export function FactorFocusCard() {
     fetchTopFactors();
   }, []);
 
+  // DEBUG: Log selectedFactor state on each render
+  console.log('FactorFocusCard render - selectedFactor:', selectedFactor);
+  console.log('ZScoreModal props:', { isOpen: selectedFactor !== null, factorId: selectedFactor?.id });
+
   return (
     <div style={{ marginTop: '20px' }} className="max-w-[96.5%] mx-auto bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-8 shadow-2xl border border-[#0a0d11]">
       {/* Header */}
@@ -165,7 +169,10 @@ export function FactorFocusCard() {
                   {topFactors.map((factor) => (
                     <div 
                       key={factor.id} 
-                      onClick={() => setSelectedFactor(factor)}
+                      onClick={() => {
+                        console.log('Factor clicked:', factor);
+                        setSelectedFactor(factor);
+                      }}
                       className="flex items-center py-[16px] px-[20px] bg-[#1a2a3d]/40 hover:bg-[#1e3045]/60 transition-colors rounded-2xl border border-[#2a3f5f]/50 cursor-pointer"
                     >
                       <span className="text-white font-medium text-base min-w-[300px]">{factor.name}</span>
