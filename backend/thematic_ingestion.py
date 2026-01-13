@@ -64,14 +64,41 @@ def initialize_embedding_model():
 
 
 def fetch_active_tickers(supabase: Client) -> List[str]:
-    """Fetch distinct active tickers from stock_prices table."""
+    """
+    Fetch distinct active tickers from stock_prices table.
+    Uses pagination to handle tables with many rows (Supabase default limit is 1000).
+    """
     try:
-        # Fetch distinct tickers from stock_prices table
-        response = supabase.table("stock_prices").select("ticker").execute()
+        all_tickers = set()
+        page_size = 1000
+        offset = 0
         
-        # Extract unique tickers
-        tickers = list(set(row["ticker"] for row in response.data if row.get("ticker")))
-        tickers.sort()  # Sort for consistent processing order
+        logger.info("Fetching tickers from stock_prices table (paginated)...")
+        
+        while True:
+            # Fetch a page of tickers using range-based pagination
+            response = supabase.table("stock_prices").select("ticker").range(
+                offset, offset + page_size - 1
+            ).execute()
+            
+            if not response.data:
+                break  # No more data
+            
+            # Add tickers from this page to our set
+            for row in response.data:
+                if row.get("ticker"):
+                    all_tickers.add(row["ticker"])
+            
+            logger.info(f"  Fetched page {offset // page_size + 1}: {len(response.data)} rows, {len(all_tickers)} unique tickers so far")
+            
+            # If we got fewer rows than page_size, we've reached the end
+            if len(response.data) < page_size:
+                break
+            
+            offset += page_size
+        
+        # Convert to sorted list for consistent processing order
+        tickers = sorted(list(all_tickers))
         
         logger.info(f"Found {len(tickers)} active tickers in database.")
         return tickers
