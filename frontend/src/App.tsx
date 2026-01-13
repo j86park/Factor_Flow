@@ -4,6 +4,7 @@ import { DashboardControls } from './components/DashboardControls';
 import { FactorFocusCard } from './components/FactorFocusCard';
 import { TopBottomFactors } from './components/TopBottomFactors';
 import { DailyFactorSummary } from './components/DailyFactorSummary';
+import { AlphaPredictor } from './components/AlphaPredictor';
 
 function App() {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState('1D');
@@ -26,6 +27,9 @@ function App() {
 
         {/* Daily Factor Summary - AI Analysis */}
         <DailyFactorSummary />
+
+        {/* AlphaPredictor - GNN Stock Predictions */}
+        <AlphaPredictor />
       </main>
     </div>
   );

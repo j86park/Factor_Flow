@@ -581,3 +581,87 @@ Write 2-3 paragraphs in a professional but accessible tone. End with 2-3 specifi
     except Exception as e:
         print(f"Error generating market analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# AlphaPredictor Models
+class AlphaPredictorStock(BaseModel):
+    ticker: str
+    predicted_return: float
+    percentile_rank: float
+
+
+class AlphaPredictorResponse(BaseModel):
+    factor_name: str
+    description: str
+    stocks: List[AlphaPredictorStock]
+    run_date: Optional[str] = None
+
+
+ALPHA_PREDICTOR_FACTOR_NAME = "AI Alpha: Weekly Top 10%"
+ALPHA_PREDICTOR_DESCRIPTION = (
+    "The model predicts next week's return by combining a stock's own price trends "
+    "with the learned influence of every other stock it correlates with in the market network."
+)
+
+
+@app.get("/api/alpha-predictor", response_model=AlphaPredictorResponse)
+def get_alpha_predictor_stocks(limit: int = 10):
+    """Fetch top predicted stocks from the GNN AlphaPredictor factor."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        # Find the AlphaPredictor factor ID
+        factor_response = supabase.table("factors").select("id, description").eq(
+            "name", ALPHA_PREDICTOR_FACTOR_NAME
+        ).execute()
+        
+        if not factor_response.data:
+            raise HTTPException(status_code=404, detail="AlphaPredictor factor not found")
+        
+        factor_id = factor_response.data[0]["id"]
+        
+        # Get the latest run_date for this factor
+        latest_date_response = supabase.table("factor_results_statistical").select(
+            "run_date"
+        ).eq("factor_id", factor_id).order("run_date", desc=True).limit(1).execute()
+        
+        if not latest_date_response.data:
+            return {
+                "factor_name": ALPHA_PREDICTOR_FACTOR_NAME,
+                "description": ALPHA_PREDICTOR_DESCRIPTION,
+                "stocks": [],
+                "run_date": None,
+            }
+        
+        latest_run_date = latest_date_response.data[0]["run_date"]
+        
+        # Fetch top stocks for this factor (sorted by predicted return / metric_value)
+        stocks_response = supabase.table("factor_results_statistical").select(
+            "ticker, metric_value, percentile_rank"
+        ).eq("factor_id", factor_id).eq("run_date", latest_run_date).order(
+            "metric_value", desc=True
+        ).limit(limit).execute()
+        
+        stocks = [
+            {
+                "ticker": row["ticker"],
+                "predicted_return": row["metric_value"],
+                "percentile_rank": row["percentile_rank"],
+            }
+            for row in stocks_response.data
+        ]
+        
+        return {
+            "factor_name": ALPHA_PREDICTOR_FACTOR_NAME,
+            "description": ALPHA_PREDICTOR_DESCRIPTION,
+            "stocks": stocks,
+            "run_date": latest_run_date,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching AlphaPredictor stocks: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
