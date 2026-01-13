@@ -23,4 +23,4 @@ seed_supabase.py
 
 ingest_prices.py
 
-
+factors.py
