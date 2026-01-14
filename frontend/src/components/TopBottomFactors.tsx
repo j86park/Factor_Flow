@@ -172,11 +172,12 @@ export function TopBottomFactors({ timeFrame }: TopBottomFactorsProps) {
     }
   };
 
-  // Sort and get top/bottom 5
-  const sortedFactors = [...factors].sort((a, b) => {
-    const aPerf = getPerformance(a) ?? -Infinity;
-    const bPerf = getPerformance(b) ?? -Infinity;
-    return bPerf - aPerf; // Descending
+  // Filter to only factors with actual performance data for the selected timeframe
+  const factorsWithData = factors.filter(f => getPerformance(f) !== null);
+
+  // Sort by performance (descending - best first, worst last)
+  const sortedFactors = [...factorsWithData].sort((a, b) => {
+    return (getPerformance(b) ?? 0) - (getPerformance(a) ?? 0);
   });
 
   const topFactors = sortedFactors.slice(0, 5);
