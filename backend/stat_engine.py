@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 from supabase import create_client, Client
-from calculate_features import fetch_all_prices, calculate_complex_features
+from calculate_features import fetch_all_prices, calculate_complex_features, calculate_fundamental_features
 from dotenv import load_dotenv
 
 # 1. SETUP
@@ -21,6 +21,11 @@ def run_statistical_engine():
 
     # 'df_features' now holds Beta, Rezzy, Momentum for EVERY stock
     df_features = calculate_complex_features(prices)
+    
+    # Add fundamental features (PE, D/E, ROIC, etc.)
+    df_fundamental = calculate_fundamental_features(df_features.index.tolist())
+    df_features = pd.concat([df_features, df_fundamental], axis=1)
+    
     print(f"Computed metrics for {len(df_features)} stocks.")
 
     # STEP 2: FETCH RULES (From Supabase)

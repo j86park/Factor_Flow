@@ -1,5 +1,6 @@
 # Environment variables
 .env
+.venv/
 
 # Python
 __pycache__/
@@ -7,7 +8,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
-venv/
+.env
+.venv/
 env/
 ENV/
 seed_supabase.py
@@ -18,7 +20,6 @@ seed_supabase.py
 *.swo
 
 .sql
+cleanup_empty_factors.py
 
-ingest_prices.py
-
-
+factors.py

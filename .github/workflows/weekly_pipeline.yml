@@ -1,0 +1,42 @@
+name: Weekly ML Pipeline
+
+on:
+  schedule:
+    # 21:30 UTC = 4:30 PM EST (Friday only)
+    # Note: During daylight saving (EDT), this runs at 5:30 PM local time
+    - cron: '30 21 * * 5'
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  weekly-ml:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+        
+      - name: Run GNN Alpha Generator
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        working-directory: backend
+        run: python gnn_alpha_generator.py
+        
+      - name: Run factor performance calculator
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        working-directory: backend
+        run: python calculate_factor_performance.py

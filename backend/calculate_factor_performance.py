@@ -30,12 +30,18 @@ PERIODS = {
 
 def get_factor_holdings() -> dict[int, list[str]]:
     """
-    Fetch the latest factor results and group tickers by factor_id.
+    Fetch the latest factor results from both statistical and thematic tables,
+    and group tickers by factor_id.
     Returns: {factor_id: [ticker1, ticker2, ...]}
     """
+    holdings = {}
+    
+    # =========================================================================
+    # Part 1: Fetch from factor_results_statistical
+    # =========================================================================
     print("Fetching factor holdings from factor_results_statistical...")
     
-    # Get the most recent run_date
+    # Get the most recent run_date for statistical
     response = (
         supabase.table("factor_results_statistical")
         .select("run_date")
@@ -44,46 +50,101 @@ def get_factor_holdings() -> dict[int, list[str]]:
         .execute()
     )
     
-    if not response.data:
-        print("⚠️ No factor results found.")
-        return {}
-    
-    latest_date = response.data[0]["run_date"]
-    print(f"Using results from {latest_date}")
-    
-    # Fetch all results for the latest run
-    all_results = []
-    offset = 0
-    page_size = 1000
-    
-    while True:
-        response = (
-            supabase.table("factor_results_statistical")
-            .select("factor_id, ticker")
-            .eq("run_date", latest_date)
-            .range(offset, offset + page_size - 1)
-            .execute()
-        )
+    statistical_count = 0
+    if response.data:
+        latest_date_stat = response.data[0]["run_date"]
+        print(f"  Using statistical results from {latest_date_stat}")
         
-        if not response.data:
-            break
+        # Fetch all results for the latest run (with pagination)
+        offset = 0
+        page_size = 1000
         
-        all_results.extend(response.data)
+        while True:
+            response = (
+                supabase.table("factor_results_statistical")
+                .select("factor_id, ticker")
+                .eq("run_date", latest_date_stat)
+                .range(offset, offset + page_size - 1)
+                .execute()
+            )
+            
+            if not response.data:
+                break
+            
+            for row in response.data:
+                fid = row["factor_id"]
+                ticker = row["ticker"]
+                if fid not in holdings:
+                    holdings[fid] = set()  # Use set to avoid duplicates
+                holdings[fid].add(ticker)
+                statistical_count += 1
+            
+            if len(response.data) < page_size:
+                break
+            offset += page_size
         
-        if len(response.data) < page_size:
-            break
-        offset += page_size
+        print(f"  Found {statistical_count} holdings from statistical factors")
+    else:
+        print("  ⚠️ No statistical factor results found.")
     
-    # Group by factor_id
-    holdings = {}
-    for row in all_results:
-        fid = row["factor_id"]
-        ticker = row["ticker"]
-        if fid not in holdings:
-            holdings[fid] = []
-        holdings[fid].append(ticker)
+    # =========================================================================
+    # Part 2: Fetch from factor_results_thematic
+    # =========================================================================
+    print("Fetching factor holdings from factor_results_thematic...")
     
-    print(f"Found {len(holdings)} factors with {len(all_results)} total holdings")
+    # Get the most recent run_date for thematic
+    response = (
+        supabase.table("factor_results_thematic")
+        .select("run_date")
+        .order("run_date", desc=True)
+        .limit(1)
+        .execute()
+    )
+    
+    thematic_count = 0
+    if response.data:
+        latest_date_thematic = response.data[0]["run_date"]
+        print(f"  Using thematic results from {latest_date_thematic}")
+        
+        # Fetch all results for the latest run (with pagination)
+        offset = 0
+        page_size = 1000
+        
+        while True:
+            response = (
+                supabase.table("factor_results_thematic")
+                .select("factor_id, ticker")
+                .eq("run_date", latest_date_thematic)
+                .range(offset, offset + page_size - 1)
+                .execute()
+            )
+            
+            if not response.data:
+                break
+            
+            for row in response.data:
+                fid = row["factor_id"]
+                ticker = row["ticker"]
+                if fid not in holdings:
+                    holdings[fid] = set()  # Use set to avoid duplicates
+                holdings[fid].add(ticker)
+                thematic_count += 1
+            
+            if len(response.data) < page_size:
+                break
+            offset += page_size
+        
+        print(f"  Found {thematic_count} holdings from thematic factors")
+    else:
+        print("  ⚠️ No thematic factor results found.")
+    
+    # =========================================================================
+    # Convert sets to lists and summarize
+    # =========================================================================
+    holdings = {fid: list(tickers) for fid, tickers in holdings.items()}
+    total_holdings = sum(len(t) for t in holdings.values())
+    
+    print(f"Found {len(holdings)} total factors with {total_holdings} total holdings")
     return holdings
 
 
