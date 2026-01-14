@@ -1,10 +1,11 @@
 import os
 import pandas as pd
 import yfinance as yf
+import pandas_datareader.data as pdr
 from supabase import create_client, Client
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from typing import List
+from typing import List, Dict, Tuple
 import requests
 
 # 1. SETUP
@@ -64,6 +65,39 @@ def gather_index_tickers() -> List[str]:
     combined = sorted({*sp500, *nasdaq100})
     print(f"🔍 Combined unique tickers count: {len(combined)}")
     return combined
+
+
+def fetch_from_stooq(ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """
+    Fallback: Fetch historical price data from Stooq.
+    Stooq requires .US suffix for US stocks.
+    Returns DataFrame with Open, High, Low, Close, Volume columns.
+    """
+    try:
+        # Stooq uses .US suffix for US equities
+        stooq_ticker = f"{ticker}.US"
+        
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        df = pdr.DataReader(stooq_ticker, 'stooq', start=start_dt, end=end_dt)
+        
+        if df.empty:
+            return pd.DataFrame()
+        
+        # Stooq returns data in descending order, reverse it
+        df = df.sort_index(ascending=True)
+        
+        # Ensure we have all required columns
+        required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+        if not all(col in df.columns for col in required_cols):
+            print(f"⚠️ Stooq data for {ticker} missing required columns")
+            return pd.DataFrame()
+        
+        return df
+    except Exception as e:
+        print(f"⚠️ Stooq fallback failed for {ticker}: {e}")
+        return pd.DataFrame()
 
 
 def get_date_ranges_from_db(tickers):
@@ -180,6 +214,9 @@ def ingest_daily_data():
         print(f"📥 Fetching data from {start_date} to {end_date} for {len(batch_tickers)} stocks...")
         
         # yfinance can download multiple tickers at once (Efficient)
+        # Track failed tickers for Stooq fallback
+        failed_tickers_in_batch: List[Tuple[str, str, str]] = []  # (ticker, start, end)
+        
         try:
             # auto_adjust=True handles splits/dividends for the NEW data
             # Note: yfinance 'end' is exclusive, so add 1 day
@@ -190,60 +227,86 @@ def ingest_daily_data():
             
             if data.empty:
                 print(f"⚠️ No data returned for batch starting {start_date}")
-                continue
-            
-            # Debug: print column structure
-            print(f"📊 Data columns type: {type(data.columns)}")
-            print(f"📊 Data columns: {list(data.columns)[:10]}...")  # First 10 columns
-            
-            records_to_insert = []
-            
-            # 4. Parse and Format for SQL
-            # yfinance returns a MultiIndex if multiple tickers, or simple DF if single
-            # Flatten MultiIndex columns if present
-            if isinstance(data.columns, pd.MultiIndex):
-                print(f"📊 MultiIndex detected with {data.columns.nlevels} levels")
-                if len(batch_tickers) == 1:
-                    # Single ticker with MultiIndex: columns are (Ticker, Metric)
-                    # We need level 1 (metric names like Open, High, etc.)
-                    data.columns = data.columns.get_level_values(1)
-                    print(f"📊 Flattened columns: {list(data.columns)}")
-                    t = batch_tickers[0]
-                    for date, row in data.dropna().iterrows():
-                        records_to_insert.append(format_row(t, date, row))
+                # All tickers in this batch failed, add them to fallback list
+                for t in batch_tickers:
+                    failed_tickers_in_batch.append((t, start_date, end_date))
+            else:
+                # Debug: print column structure
+                print(f"📊 Data columns type: {type(data.columns)}")
+                print(f"📊 Data columns: {list(data.columns)[:10]}...")  # First 10 columns
+                
+                records_to_insert = []
+                
+                # 4. Parse and Format for SQL
+                # yfinance returns a MultiIndex if multiple tickers, or simple DF if single
+                # Flatten MultiIndex columns if present
+                if isinstance(data.columns, pd.MultiIndex):
+                    print(f"📊 MultiIndex detected with {data.columns.nlevels} levels")
+                    if len(batch_tickers) == 1:
+                        # Single ticker with MultiIndex: columns are (Ticker, Metric)
+                        # We need level 1 (metric names like Open, High, etc.)
+                        data.columns = data.columns.get_level_values(1)
+                        print(f"📊 Flattened columns: {list(data.columns)}")
+                        t = batch_tickers[0]
+                        for date, row in data.dropna().iterrows():
+                            records_to_insert.append(format_row(t, date, row))
+                    else:
+                        # Multiple tickers with MultiIndex: columns are (Ticker, Metric)
+                        # Use level 0 to get ticker data
+                        for t in batch_tickers:
+                            try:
+                                df_ticker = data.xs(t, level=0, axis=1).dropna()
+                                if df_ticker.empty:
+                                    failed_tickers_in_batch.append((t, start_date, end_date))
+                                else:
+                                    for date, row in df_ticker.iterrows():
+                                        records_to_insert.append(format_row(t, date, row))
+                            except KeyError:
+                                print(f"⚠️ No data for {t}")
+                                failed_tickers_in_batch.append((t, start_date, end_date))
                 else:
-                    # Multiple tickers with MultiIndex: columns are (Ticker, Metric)
-                    # Use level 0 to get ticker data
-                    for t in batch_tickers:
-                        try:
-                            df_ticker = data.xs(t, level=0, axis=1).dropna()
+                    print(f"📊 Simple columns detected")
+                    # Simple columns (older yfinance or single ticker without MultiIndex)
+                    if len(batch_tickers) == 1:
+                        t = batch_tickers[0]
+                        for date, row in data.dropna().iterrows():
+                            records_to_insert.append(format_row(t, date, row))
+                    else:
+                        for t in batch_tickers:
+                            df_ticker = data[t].dropna()
                             for date, row in df_ticker.iterrows():
                                 records_to_insert.append(format_row(t, date, row))
-                        except KeyError:
-                            print(f"⚠️ No data for {t}")
-            else:
-                print(f"📊 Simple columns detected")
-                # Simple columns (older yfinance or single ticker without MultiIndex)
-                if len(batch_tickers) == 1:
-                    t = batch_tickers[0]
-                    for date, row in data.dropna().iterrows():
-                        records_to_insert.append(format_row(t, date, row))
+                
+                # 5. Bulk Upsert to Supabase
+                if records_to_insert:
+                    print(f"Uploading {len(records_to_insert)} rows...")
+                    response = supabase.table("stock_prices").upsert(records_to_insert).execute()
+                    print(f"✅ Supabase upsert wrote {len(response.data)} rows")
                 else:
-                    for t in batch_tickers:
-                        df_ticker = data[t].dropna()
-                        for date, row in df_ticker.iterrows():
-                            records_to_insert.append(format_row(t, date, row))
-            
-            # 5. Bulk Upsert to Supabase
-            if records_to_insert:
-                print(f"Uploading {len(records_to_insert)} rows...")
-                response = supabase.table("stock_prices").upsert(records_to_insert).execute()
-                print(f"✅ Supabase upsert wrote {len(response.data)} rows")
-            else:
-                print("⚠️ No records extracted for this batch.")
+                    print("⚠️ No records extracted for this batch.")
                 
         except Exception as e:
             print(f"Error processing batch {start_date}: {e}")
+        
+        # ===== STOOQ FALLBACK FOR FAILED TICKERS =====
+        if failed_tickers_in_batch:
+            print(f"\n🔄 Attempting Stooq fallback for {len(failed_tickers_in_batch)} failed ticker(s)...")
+            fallback_records = []
+            
+            for ticker, fb_start, fb_end in failed_tickers_in_batch:
+                df_stooq = fetch_from_stooq(ticker, fb_start, fb_end)
+                
+                if not df_stooq.empty:
+                    print(f"  ✔️ Stooq retrieved {len(df_stooq)} rows for {ticker}")
+                    for date, row in df_stooq.iterrows():
+                        fallback_records.append(format_row(ticker, date, row))
+                else:
+                    print(f"  ❌ Stooq: No data for {ticker}")
+            
+            if fallback_records:
+                print(f"Uploading {len(fallback_records)} fallback rows...")
+                response = supabase.table("stock_prices").upsert(fallback_records).execute()
+                print(f"✅ Supabase upsert wrote {len(response.data)} fallback rows")
 
 def format_row(ticker, date, row):
     return {
