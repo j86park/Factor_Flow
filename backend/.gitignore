@@ -20,6 +20,6 @@ seed_supabase.py
 *.swo
 
 .sql
-
+deactivate_factors.py
 
 factors.py

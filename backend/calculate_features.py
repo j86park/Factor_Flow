@@ -5,6 +5,7 @@ from supabase import create_client, Client
 import dotenv
 import yfinance as yf
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 1. SETUP
 dotenv.load_dotenv()
@@ -278,6 +279,130 @@ def calculate_complex_features(price_matrix):
     features['upside_beta'] = upside_betas
 
     return features
+
+
+def _fetch_single_ticker_fundamentals(ticker: str) -> dict:
+    """
+    Fetch fundamental data for a single ticker from yfinance.
+    Returns a dict with the ticker and its fundamental metrics.
+    """
+    result = {'ticker': ticker}
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        
+        # PE Ratio (trailing)
+        result['pe_ratio'] = info.get('trailingPE')
+        
+        # Debt to Equity
+        result['debt_to_equity'] = info.get('debtToEquity')
+        
+        # Leverage Ratio (same as debt_to_equity for our purposes)
+        result['leverage_ratio'] = info.get('debtToEquity')
+        
+        # Return on Capital / ROIC
+        # yfinance doesn't have direct ROIC, so we calculate from available data
+        # ROIC = EBIT / (Total Assets - Current Liabilities)
+        # Or use returnOnEquity as a proxy if returnOnCapital not available
+        roic = info.get('returnOnCapital')
+        if roic is None:
+            # Use ROE * (1 - debt ratio) as rough proxy
+            roe = info.get('returnOnEquity')
+            if roe is not None:
+                debt_ratio = info.get('debtToEquity', 0)
+                if debt_ratio and debt_ratio > 0:
+                    # Rough ROIC approximation
+                    result['roic'] = roe / (1 + debt_ratio / 100)
+                else:
+                    result['roic'] = roe
+            else:
+                result['roic'] = None
+        else:
+            result['roic'] = roic
+        
+        # Net Income
+        result['net_income'] = info.get('netIncomeToCommon')
+        
+        # Buyback Yield calculation
+        # buyback_yield = shares repurchased value / market cap
+        market_cap = info.get('marketCap')
+        shares_repurchased = info.get('sharesRepurchased')
+        if market_cap and shares_repurchased and market_cap > 0:
+            result['buyback_yield'] = shares_repurchased / market_cap
+        else:
+            result['buyback_yield'] = None
+            
+    except Exception as e:
+        # Return None for all metrics on error
+        result['pe_ratio'] = None
+        result['debt_to_equity'] = None
+        result['leverage_ratio'] = None
+        result['roic'] = None
+        result['net_income'] = None
+        result['buyback_yield'] = None
+        
+    return result
+
+
+def calculate_fundamental_features(tickers: list) -> pd.DataFrame:
+    """
+    Fetches fundamental data from yfinance for a list of tickers.
+    Uses parallel execution for speed.
+    
+    Args:
+        tickers: List of ticker symbols
+        
+    Returns:
+        DataFrame with tickers as index and fundamental metrics as columns
+    """
+    print(f"Fetching fundamental data for {len(tickers)} tickers...")
+    
+    results = []
+    failed_count = 0
+    
+    # Use ThreadPoolExecutor for parallel fetching
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_ticker = {
+            executor.submit(_fetch_single_ticker_fundamentals, ticker): ticker 
+            for ticker in tickers
+        }
+        
+        for i, future in enumerate(as_completed(future_to_ticker)):
+            ticker = future_to_ticker[future]
+            try:
+                result = future.result()
+                results.append(result)
+                
+                # Check if we got any valid data
+                has_data = any(v is not None for k, v in result.items() if k != 'ticker')
+                if not has_data:
+                    failed_count += 1
+                    
+            except Exception as e:
+                failed_count += 1
+                results.append({
+                    'ticker': ticker,
+                    'pe_ratio': None,
+                    'debt_to_equity': None,
+                    'leverage_ratio': None,
+                    'roic': None,
+                    'net_income': None,
+                    'buyback_yield': None
+                })
+            
+            # Progress update every 50 tickers
+            if (i + 1) % 50 == 0:
+                print(f"   ... processed {i + 1}/{len(tickers)} tickers")
+    
+    df = pd.DataFrame(results).set_index('ticker')
+    
+    # Summary stats
+    valid_counts = df.notna().sum()
+    print(f"[FUNDAMENTAL] Fetched data for {len(tickers)} tickers ({failed_count} failed)")
+    for col in df.columns:
+        print(f"   {col}: {valid_counts[col]} valid values")
+    
+    return df
 
 if __name__ == "__main__":
     # Test Run
