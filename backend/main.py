@@ -189,7 +189,7 @@ def get_factors():
     """Fetch factors from Supabase"""
     if supabase:
         try:
-            response = supabase.table("factors").select("name, description, type").execute()
+            response = supabase.table("factors").select("name, description, type").eq("is_active", True).execute()
             factors = []
             for row in response.data:
                 factors.append({
@@ -211,8 +211,8 @@ def get_factors_with_performance():
         raise HTTPException(status_code=503, detail="Supabase not configured")
     
     try:
-        # Fetch all factors
-        factors_response = supabase.table("factors").select("id, name, description, type").execute()
+        # Fetch all active factors only
+        factors_response = supabase.table("factors").select("id, name, description, type").eq("is_active", True).execute()
         factors = {row["id"]: row for row in factors_response.data}
         
         # Fetch latest performance for each factor (ordered by run_date desc)
