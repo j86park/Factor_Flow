@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Target } from 'lucide-react';
 import { Modal } from './Modal';
 import { ZScoreModal } from './ZScoreModal';
+import { FactorRotationQuadrant } from './FactorRotationQuadrant';
 
 interface TopFactor {
   id: number;
@@ -194,14 +195,10 @@ export function FactorFocusCard() {
       <Modal
         isOpen={isRotationOpen}
         onClose={() => setIsRotationOpen(false)}
-        title="Factor Rotation"
-        subtitle="Analyze factor performance trends"
+        title="Factor Rotation Quadrant"
+        subtitle="Visualize factor momentum and identify rotation opportunities"
       >
-        <div className="space-y-6">
-          <p className="text-gray-300 text-center py-8">
-            Factor rotation analysis content will go here...
-          </p>
-        </div>
+        <FactorRotationQuadrant />
       </Modal>
 
       {/* Z-Score Detail Modal */}

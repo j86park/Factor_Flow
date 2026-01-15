@@ -80,6 +80,8 @@ class FactorWithPerformance(BaseModel):
     perf_6m: Optional[float] = None
     perf_1y: Optional[float] = None
     num_holdings: Optional[int] = None
+    quadrant_category: Optional[str] = None
+    rotation_magnitude: Optional[float] = None
 
 
 class TopFactor(BaseModel):
@@ -219,7 +221,7 @@ def get_factors_with_performance():
         
         # Fetch latest performance for each factor (ordered by run_date desc)
         perf_response = supabase.table("factor_performance").select(
-            "factor_id, run_date, perf_1d, perf_5d, perf_1m, perf_3m, perf_6m, perf_1y, num_holdings"
+            "factor_id, run_date, perf_1d, perf_5d, perf_1m, perf_3m, perf_6m, perf_1y, num_holdings, quadrant_category, rotation_magnitude"
         ).order("run_date", desc=True).execute()
         
         # Build a map of factor_id -> latest performance (first occurrence due to desc order)
@@ -245,6 +247,8 @@ def get_factors_with_performance():
                 "perf_6m": perf.get("perf_6m"),
                 "perf_1y": perf.get("perf_1y"),
                 "num_holdings": perf.get("num_holdings"),
+                "quadrant_category": perf.get("quadrant_category"),
+                "rotation_magnitude": perf.get("rotation_magnitude"),
             })
         
         # Sort by name for consistent ordering
