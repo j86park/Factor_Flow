@@ -180,6 +180,44 @@ def calculate_period_return(price_matrix: pd.DataFrame, tickers: list[str], days
     return avg_return if not pd.isna(avg_return) else np.nan
 
 
+def classify_quadrant(short_term: float | None, medium_term: float | None) -> str | None:
+    """
+    Classify factor into rotation quadrant based on Dual-Momentum.
+    
+    Quadrants:
+    - Leaders: Both positive (+ / +)
+    - Fading: Short negative, Medium positive (- / +)
+    - Recovering: Short positive, Medium negative (+ / -)
+    - Laggards: Both negative (- / -)
+    """
+    if short_term is None or medium_term is None:
+        return None
+    if pd.isna(short_term) or pd.isna(medium_term):
+        return None
+    
+    if short_term >= 0 and medium_term >= 0:
+        return "Leaders"
+    elif short_term < 0 and medium_term >= 0:
+        return "Fading"
+    elif short_term >= 0 and medium_term < 0:
+        return "Recovering"
+    else:  # short < 0 and medium < 0
+        return "Laggards"
+
+
+def calculate_rotation_magnitude(short_term: float | None, medium_term: float | None) -> float | None:
+    """
+    Calculate rotation magnitude as sum of absolute values.
+    Higher magnitude = more significant mover.
+    """
+    if short_term is None or medium_term is None:
+        return None
+    if pd.isna(short_term) or pd.isna(medium_term):
+        return None
+    
+    return abs(short_term) + abs(medium_term)
+
+
 def calculate_all_factor_performance(price_matrix: pd.DataFrame, holdings: dict[int, list[str]]) -> pd.DataFrame:
     """
     Calculate performance metrics for all factors.
@@ -206,16 +244,28 @@ def upload_factor_performance(df: pd.DataFrame, factor_names: dict[int, str]):
     records = []
     for _, row in df.iterrows():
         factor_id = int(row["factor_id"])
+        
+        # Get short-term (5D) and medium-term (1M) for rotation logic
+        short_term = float(row["perf_5d"]) if not pd.isna(row["perf_5d"]) else None
+        medium_term = float(row["perf_1m"]) if not pd.isna(row["perf_1m"]) else None
+        
+        # Calculate rotation fields
+        quadrant = classify_quadrant(short_term, medium_term)
+        magnitude = calculate_rotation_magnitude(short_term, medium_term)
+        
         records.append({
             "factor_id": factor_id,
             "run_date": today,
             "num_holdings": int(row["num_holdings"]),
             "perf_1d": float(row["perf_1d"]) if not pd.isna(row["perf_1d"]) else None,
-            "perf_5d": float(row["perf_5d"]) if not pd.isna(row["perf_5d"]) else None,
-            "perf_1m": float(row["perf_1m"]) if not pd.isna(row["perf_1m"]) else None,
+            "perf_5d": short_term,
+            "perf_1m": medium_term,
             "perf_3m": float(row["perf_3m"]) if not pd.isna(row["perf_3m"]) else None,
             "perf_6m": float(row["perf_6m"]) if not pd.isna(row["perf_6m"]) else None,
             "perf_1y": float(row["perf_1y"]) if not pd.isna(row["perf_1y"]) else None,
+            # Factor Rotation fields (Dual-Momentum)
+            "quadrant_category": quadrant,
+            "rotation_magnitude": magnitude,
         })
     
     if records:
