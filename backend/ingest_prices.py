@@ -287,6 +287,9 @@ def ingest_daily_data():
                 
         except Exception as e:
             print(f"Error processing batch {start_date}: {e}")
+            # Add all tickers in this batch to the fallback list
+            for t in batch_tickers:
+                failed_tickers_in_batch.append((t, start_date, end_date))
         
         # ===== STOOQ FALLBACK FOR FAILED TICKERS =====
         if failed_tickers_in_batch:
