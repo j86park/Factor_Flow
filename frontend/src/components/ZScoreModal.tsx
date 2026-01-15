@@ -39,7 +39,7 @@ interface ZScoreModalProps {
   factorName: string;
 }
 
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 function StatCard({ label, value, isPercent = false }: { label: string; value: number | null; isPercent?: boolean }) {
   const formatValue = (val: number | null): string => {
@@ -70,7 +70,7 @@ function StatCard({ label, value, isPercent = false }: { label: string; value: n
 export function ZScoreModal({ isOpen, onClose, factorId, factorName }: ZScoreModalProps) {
   // DEBUG
   console.log('ZScoreModal component - isOpen:', isOpen, 'factorId:', factorId);
-  
+
   const [data, setData] = useState<ZScoreData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +113,7 @@ export function ZScoreModal({ isOpen, onClose, factorId, factorName }: ZScoreMod
     console.log('ZScoreModal: returning null because isOpen is false');
     return null;
   }
-  
+
   console.log('ZScoreModal: RENDERING MODAL - isOpen is true');
 
   // Format chart data with shortened date labels

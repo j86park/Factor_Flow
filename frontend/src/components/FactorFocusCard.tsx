@@ -12,7 +12,7 @@ interface TopFactor {
   perf_1m: number | null;
 }
 
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 function ReturnCell({ value }: { value: number | null }) {
   if (value === null || value === undefined) {
@@ -27,10 +27,10 @@ function ReturnCell({ value }: { value: number | null }) {
   const percentValue = value * 100;
   const isPositive = percentValue > 0;
   const isNegative = percentValue < 0;
-  
+
   let bgColor = '';
   let textColor = '';
-  
+
   if (isPositive) {
     bgColor = 'bg-teal-600/80';
     textColor = 'text-white';
@@ -63,7 +63,7 @@ export function FactorFocusCard() {
     const fetchTopFactors = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // Fetch top 5 factors by weekly performance
         const response = await fetch(`${API_BASE_URL}/api/top-factors?limit=5`);
@@ -72,7 +72,7 @@ export function FactorFocusCard() {
         }
         const factors: TopFactor[] = await response.json();
         setTopFactors(factors);
-        
+
         // If we have factors, generate a theme title
         if (factors.length > 0) {
           const factorNames = factors.map(f => f.name);
@@ -115,7 +115,7 @@ export function FactorFocusCard() {
           <br />
           <span style={{ fontSize: '0.75rem', display: 'block', marginTop: '-0.25rem' }} className="text-gray-400 font-normal">Key factors to watch</span>
         </h2>
-        
+
         {/* Factor Rotation Button */}
         <button
           onClick={() => setIsRotationOpen(true)}
@@ -134,26 +134,26 @@ export function FactorFocusCard() {
               <p className="text-gray-400">Loading top factors...</p>
             </div>
           )}
-          
+
           {error && (
             <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4 mb-4">
               <p className="text-red-400 text-center">Error: {error}</p>
             </div>
           )}
-          
+
           {!isLoading && !error && topFactors.length === 0 && (
             <div className="text-center py-12">
               <p className="text-gray-500">No performance data available yet.</p>
               <p className="text-gray-600 text-sm mt-2">Run the performance calculation script to populate data.</p>
             </div>
           )}
-          
+
           {!isLoading && !error && topFactors.length > 0 && (
             <div className="mb-8 bg-gradient-to-br from-[#0a0f16] via-[#0d1320] to-[#0a0f16] rounded-[4rem] p-[60px]">
               <div className="px-[30px]">
                 {/* Category Title - Dynamic from LLM */}
                 <h3 className="text-2xl font-bold text-indigo-400 mb-[30px]">{themeTitle}</h3>
-                
+
                 {/* Table Header */}
                 <div className="flex items-center mb-[20px]">
                   <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider min-w-[300px]">Factor</span>
@@ -167,8 +167,8 @@ export function FactorFocusCard() {
                 {/* Factor Rows */}
                 <div className="space-y-[12px]">
                   {topFactors.map((factor) => (
-                    <div 
-                      key={factor.id} 
+                    <div
+                      key={factor.id}
                       onClick={() => {
                         console.log('Factor clicked:', factor);
                         setSelectedFactor(factor);
