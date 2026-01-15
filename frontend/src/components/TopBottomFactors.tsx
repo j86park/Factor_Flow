@@ -18,7 +18,7 @@ interface TopBottomFactorsProps {
   timeFrame: string;
 }
 
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 function ReturnCell({ value }: { value: number | null }) {
   if (value === null || value === undefined) {

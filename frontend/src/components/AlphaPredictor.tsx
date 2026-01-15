@@ -13,7 +13,7 @@ interface AlphaPredictorData {
     run_date: string | null;
 }
 
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 function formatDate(dateStr: string): string {
     const date = new Date(dateStr);

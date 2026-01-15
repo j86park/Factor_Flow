@@ -26,7 +26,7 @@ interface Factor {
 const TIME_FRAMES = ['1D', '5D', '1M', '3M', '6M', '12M'];
 
 // API endpoint - adjust if your backend runs on a different port
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 interface DashboardControlsProps {
   selectedTimeFrame: string;
@@ -36,7 +36,7 @@ interface DashboardControlsProps {
 export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: DashboardControlsProps) {
   const [isDefinitionsOpen, setIsDefinitionsOpen] = useState(false);
   const [isFactorsOpen, setIsFactorsOpen] = useState(false);
-  
+
   const [definitions, setDefinitions] = useState<Definition[]>([]);
   const [factors, setFactors] = useState<Factor[]>([]);
   const [currentDate, setCurrentDate] = useState('');
@@ -53,7 +53,7 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
   const getLastMarketDay = (): string => {
     const now = new Date();
     const day = now.getDay(); // 0 = Sunday, 6 = Saturday
-    
+
     let daysToSubtract = 0;
     if (day === 0) {
       // Sunday - go back 2 days to Friday
@@ -62,15 +62,15 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
       // Saturday - go back 1 day to Friday
       daysToSubtract = 1;
     }
-    
+
     if (daysToSubtract > 0) {
       now.setDate(now.getDate() - daysToSubtract);
     }
-    
+
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const dayOfMonth = String(now.getDate()).padStart(2, '0');
-    
+
     return `${year}-${month}-${dayOfMonth}`;
   };
 
@@ -137,7 +137,7 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
     <div className="w-full" style={{ marginTop: '20px' }}>
       {/* Dashboard Card Container */}
       <div className="max-w-[96.5%] mx-auto bg-gradient-to-br from-[#0e1419] via-[#12181f] to-[#0e1419] rounded-[2rem] p-10 md:p-14 shadow-2xl border border-[#0a0d11]">
-        
+
         {/* Title Row - Centered */}
         <div className="flex items-center justify-center gap-4 mb-10">
           <BarChart3 className="w-10 h-10 md:w-12 md:h-12 text-cyan-400" />
@@ -149,7 +149,7 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
         {/* Controls Row - Evenly spread horizontally */}
         <div className="flex flex-wrap items-center justify-center gap-[3rem] px-2">
           {/* Definitions Button - Purple tint */}
-          <button 
+          <button
             onClick={() => setIsDefinitionsOpen(true)}
             style={{ backgroundColor: '#2d2459', color: '#c4b5fd', height: '35px' }}
             className="flex items-center gap-3 px-6 rounded-full hover:opacity-80 transition-all text-base font-bold"
@@ -160,7 +160,7 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
 
           {/* Live Feed + Date combined - Cyan for digital/real-time feel */}
           <div style={{ height: '35px' }} className="flex items-center gap-4 text-cyan-400 text-base font-bold">
-            <div 
+            <div
               style={{
                 width: '10px',
                 height: '10px',
@@ -175,7 +175,7 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
           </div>
 
           {/* Active Factors - Purple tint */}
-          <button 
+          <button
             onClick={() => setIsFactorsOpen(true)}
             style={{ backgroundColor: '#2d2459', color: '#c4b5fd', height: '35px' }}
             className="px-6 rounded-full hover:opacity-80 transition-all text-base font-bold flex items-center"
@@ -190,8 +190,8 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
                 key={tf}
                 onClick={() => onTimeFrameChange(tf)}
                 style={
-                  selectedTimeFrame === tf 
-                    ? { backgroundColor: '#22d3ee', color: '#000000', width: '54px', height: '35px' } 
+                  selectedTimeFrame === tf
+                    ? { backgroundColor: '#22d3ee', color: '#000000', width: '54px', height: '35px' }
                     : { backgroundColor: '#1e2a3a', color: '#d1d5db', width: '54px', height: '35px' }
                 }
                 className="rounded-full text-lg font-bold transition-all duration-200 hover:opacity-80 flex items-center justify-center"
@@ -254,9 +254,9 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
       >
         {/* Search Bar */}
         <div className="relative mb-6">
-          <input 
-            type="text" 
-            placeholder="Search factors..." 
+          <input
+            type="text"
+            placeholder="Search factors..."
             value={factorSearch}
             onChange={(event) => setFactorSearch(event.target.value)}
             className="w-full bg-[#0a0e14] border border-gray-700 rounded-xl py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
@@ -281,10 +281,10 @@ export function DashboardControls({ selectedTimeFrame, onTimeFrameChange }: Dash
               const term = factorSearch.trim().toLowerCase();
               const filtered = term
                 ? factors.filter((factor) =>
-                    factor.name.toLowerCase().includes(term)
-                    || factor.description.toLowerCase().includes(term)
-                    || (factor.type?.toLowerCase().includes(term) ?? false)
-                  )
+                  factor.name.toLowerCase().includes(term)
+                  || factor.description.toLowerCase().includes(term)
+                  || (factor.type?.toLowerCase().includes(term) ?? false)
+                )
                 : factors;
 
               if (filtered.length === 0) {
