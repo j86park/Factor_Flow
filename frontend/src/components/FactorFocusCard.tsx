@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Target } from 'lucide-react';
 import { Modal } from './Modal';
 import { ZScoreModal } from './ZScoreModal';
+import { FactorRotationQuadrant } from './FactorRotationQuadrant';
 
 interface TopFactor {
   id: number;
@@ -17,7 +18,7 @@ import { API_BASE_URL } from '../config';
 function ReturnCell({ value }: { value: number | null }) {
   if (value === null || value === undefined) {
     return (
-      <div className="px-3 py-1.5 rounded-md bg-gray-800/30 text-gray-500 text-xs font-semibold text-center w-full">
+      <div className="px-3 py-1.5 text-xs font-semibold text-center w-full" style={{ color: '#6b7280' }}>
         --
       </div>
     );
@@ -28,28 +29,19 @@ function ReturnCell({ value }: { value: number | null }) {
   const isPositive = percentValue > 0;
   const isNegative = percentValue < 0;
 
-  let bgColor = '';
-  let textColor = '';
-
-  if (isPositive) {
-    bgColor = 'bg-teal-600/80';
-    textColor = 'text-white';
-  } else if (isNegative) {
-    bgColor = 'bg-orange-600/80';
-    textColor = 'text-white';
-  } else {
-    bgColor = 'bg-gray-700/50';
-    textColor = 'text-gray-300';
-  }
+  // Use inline styles for colors (Tailwind JIT doesn't detect dynamic classes)
+  const textColor = isPositive ? '#4ade80' : isNegative ? '#f87171' : '#9ca3af';
 
   const formatted = `${isPositive ? '+' : ''}${percentValue.toFixed(2)}%`;
 
   return (
-    <div className={`px-3 py-1.5 rounded-md ${bgColor} ${textColor} text-xs font-semibold text-center w-full`}>
+    <div className="px-3 py-1.5 text-xs font-semibold text-center w-full" style={{ color: textColor }}>
       {formatted}
     </div>
   );
 }
+
+
 
 export function FactorFocusCard() {
   const [topFactors, setTopFactors] = useState<TopFactor[]>([]);
@@ -194,14 +186,10 @@ export function FactorFocusCard() {
       <Modal
         isOpen={isRotationOpen}
         onClose={() => setIsRotationOpen(false)}
-        title="Factor Rotation"
-        subtitle="Analyze factor performance trends"
+        title="Factor Rotation Quadrant"
+        subtitle="Visualize factor momentum and identify rotation opportunities"
       >
-        <div className="space-y-6">
-          <p className="text-gray-300 text-center py-8">
-            Factor rotation analysis content will go here...
-          </p>
-        </div>
+        <FactorRotationQuadrant />
       </Modal>
 
       {/* Z-Score Detail Modal */}
