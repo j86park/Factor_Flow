@@ -73,7 +73,7 @@ StrEnum==0.4.15
 supabase==2.25.1
 supabase-auth==2.25.1
 supabase-functions==2.25.1
-sympy==1.14.0
+sympy==1.13.1
 tokenizers==0.22.2
 tqdm==4.67.1
 typer-slim==0.21.1

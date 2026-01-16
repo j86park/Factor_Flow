@@ -1,7 +1,7 @@
 # Environment variables
 .env
 .venv/
-
+test_env/
 # Python
 __pycache__/
 *.py[cod]
