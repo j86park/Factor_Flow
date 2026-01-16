@@ -5,6 +5,7 @@ from typing import List, Optional
 import os
 import re
 import httpx
+import asyncio
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -38,6 +39,71 @@ app.add_middleware(
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+# OpenRouter configuration
+OPENROUTER_MODEL = "openai/gpt-4.1-mini"  # Use GPT-4.1 mini for all LLM calls
+OPENROUTER_MAX_RETRIES = 3
+OPENROUTER_BASE_DELAY = 2  # seconds
+
+
+async def call_openrouter(
+    prompt: str,
+    max_tokens: int = 100,
+    temperature: float = 0.7,
+    timeout: float = 30.0,
+) -> str | None:
+    """
+    Call OpenRouter API with retry logic and fallback handling.
+    Returns the LLM response content or None if all retries fail.
+    """
+    if not OPENROUTER_API_KEY:
+        print("Warning: OPENROUTER_API_KEY not set")
+        return None
+    
+    for attempt in range(OPENROUTER_MAX_RETRIES):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": OPENROUTER_MODEL,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                    },
+                    timeout=timeout,
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    return data["choices"][0]["message"]["content"].strip()
+                
+                # Handle 503 and other retryable errors
+                if response.status_code in (503, 502, 429):
+                    wait_time = OPENROUTER_BASE_DELAY * (2 ** attempt)
+                    print(f"OpenRouter API error {response.status_code}, retrying in {wait_time}s (attempt {attempt + 1}/{OPENROUTER_MAX_RETRIES})")
+                    await asyncio.sleep(wait_time)
+                    continue
+                
+                # Non-retryable error
+                print(f"OpenRouter API error: {response.status_code} - {response.text}")
+                return None
+                
+        except httpx.TimeoutException:
+            wait_time = OPENROUTER_BASE_DELAY * (2 ** attempt)
+            print(f"OpenRouter timeout, retrying in {wait_time}s (attempt {attempt + 1}/{OPENROUTER_MAX_RETRIES})")
+            await asyncio.sleep(wait_time)
+        except Exception as e:
+            print(f"OpenRouter error: {e}")
+            return None
+    
+    print(f"OpenRouter failed after {OPENROUTER_MAX_RETRIES} retries")
+    return None
+
 
 # Simple in-memory cache for theme titles
 _theme_title_cache: dict[str, str] = {}
@@ -330,61 +396,33 @@ async def generate_theme_title(request: ThemeTitleRequest):
     if cache_key in _theme_title_cache:
         return {"title": _theme_title_cache[cache_key]}
     
-    # If no API key, return a generic title
-    if not OPENROUTER_API_KEY:
-        print("Warning: OPENROUTER_API_KEY not set. Using fallback title.")
-        return {"title": "Top Performers"}
-    
-    try:
-        factors_list = ", ".join(request.factor_names)
-        prompt = f"""Given these investment factor names: {factors_list}
+    # Build prompt
+    factors_list = ", ".join(request.factor_names)
+    prompt = f"""Given these investment factor names: {factors_list}
 
 Generate a short, catchy 2-4 word title that captures the common theme or category these factors belong to. 
 Just respond with the title, nothing else. No quotes, no explanation.
 
 Examples of good titles: "AI & Tech", "Value Plays", "Growth Momentum", "Defensive Assets", "Energy & Materials"
 """
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "mistralai/mistral-7b-instruct",
-                    "messages": [
-                        {"role": "user", "content": prompt}
-                    ],
-                    "max_tokens": 20,
-                    "temperature": 0.7,
-                },
-                timeout=10.0,
-            )
-            
-            if response.status_code != 200:
-                print(f"OpenRouter API error: {response.status_code} - {response.text}")
-                return {"title": "Top Performers"}
-            
-            data = response.json()
-            title = data["choices"][0]["message"]["content"].strip()
-            
-            # Clean up the title (remove quotes and common LLM prefixes)
-            title = title.strip('"\'')
-            # Remove common LLM output prefixes like "[OUT]", "Output:", etc.
-            title = re.sub(r'^\[OUT\]\s*', '', title, flags=re.IGNORECASE)
-            title = re.sub(r'^(Output|Answer|Title|Response):\s*', '', title, flags=re.IGNORECASE)
-            title = title.strip('"\'').strip()
-            
-            # Cache the result
-            _theme_title_cache[cache_key] = title
-            
-            return {"title": title}
-            
-    except Exception as e:
-        print(f"Error generating theme title: {e}")
+    
+    # Call OpenRouter with retry logic
+    title = await call_openrouter(prompt, max_tokens=20, temperature=0.7, timeout=10.0)
+    
+    # Fallback if LLM call failed
+    if not title:
         return {"title": "Top Performers"}
+    
+    # Clean up the title (remove quotes and common LLM prefixes)
+    title = title.strip('"\'')
+    title = re.sub(r'^\[OUT\]\s*', '', title, flags=re.IGNORECASE)
+    title = re.sub(r'^(Output|Answer|Title|Response):\s*', '', title, flags=re.IGNORECASE)
+    title = title.strip('"\'').strip()
+    
+    # Cache the result
+    _theme_title_cache[cache_key] = title
+    
+    return {"title": title}
 
 
 @app.get("/api/factor-zscore/{factor_id}", response_model=FactorZScoreResponse)
@@ -539,36 +577,13 @@ Analyze what this factor rotation tells us about:
 
 Write 2-3 paragraphs in a professional but accessible tone. End with 2-3 specific questions for investors to consider. Do not use bullet points in your main analysis."""
 
-        # Default analysis if no API key
-        analysis = "Market analysis unavailable. Please configure OPENROUTER_API_KEY."
+        # Call OpenRouter with retry logic
+        analysis = await call_openrouter(prompt, max_tokens=800, temperature=0.7, timeout=30.0)
         
-        if OPENROUTER_API_KEY:
-            try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        "https://openrouter.ai/api/v1/chat/completions",
-                        headers={
-                            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "model": "anthropic/claude-3.5-sonnet",
-                            "messages": [
-                                {"role": "user", "content": prompt}
-                            ],
-                            "max_tokens": 800,
-                            "temperature": 0.7,
-                        },
-                        timeout=30.0,
-                    )
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        analysis = data["choices"][0]["message"]["content"].strip()
-                    else:
-                        print(f"OpenRouter API error: {response.status_code} - {response.text}")
-            except Exception as e:
-                print(f"Error calling OpenRouter: {e}")
+        # Fallback if LLM call failed
+        if not analysis:
+            analysis = "Market analysis temporarily unavailable. Please try again later."
+
         
         result = {
             "date": today,
